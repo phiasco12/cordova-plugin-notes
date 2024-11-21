@@ -40,9 +40,8 @@ public class NoteEditorActivity extends Activity {
         textOverlay.setTextSize(16);                      // Font size
         textOverlay.setSingleLine(false);                 // Multiline input
         textOverlay.setPadding(20, 20, 20, 20);
-        textOverlay.setVisibility(View.INVISIBLE);        // Start invisible (drawing mode default)
         textOverlay.setLayoutParams(fullScreenParams);
-        layout.addView(textOverlay);
+        layout.addView(textOverlay); // Add text overlay on top of drawing view
 
         // Add toggle button
         Button toggleButton = new Button(this);
@@ -57,25 +56,37 @@ public class NoteEditorActivity extends Activity {
 
         // Set the content view
         setContentView(layout);
+
+        // Start in drawing mode
+        enterDrawingMode();
     }
 
     // Toggle between drawing and typing
     private void toggleMode(Button toggleButton) {
-        isDrawingMode = !isDrawingMode;
-
         if (isDrawingMode) {
-            // Enable drawing
-            textOverlay.clearFocus(); // Dismiss keyboard
-            textOverlay.setVisibility(View.INVISIBLE); // Keep text visible but not interactive
-            drawingView.setTouchEnabled(true);
-            toggleButton.setText("Toggle to Typing");
-        } else {
-            // Enable typing
-            textOverlay.setVisibility(View.VISIBLE); // Allow interaction
-            textOverlay.requestFocus(); // Show keyboard
-            drawingView.setTouchEnabled(false);
+            // Switch to typing mode
+            enterTypingMode();
             toggleButton.setText("Toggle to Drawing");
+        } else {
+            // Switch to drawing mode
+            enterDrawingMode();
+            toggleButton.setText("Toggle to Typing");
         }
+        isDrawingMode = !isDrawingMode;
+    }
+
+    // Enter drawing mode
+    private void enterDrawingMode() {
+        textOverlay.clearFocus(); // Dismiss keyboard
+        drawingView.setTouchEnabled(true); // Enable drawing
+        textOverlay.setEnabled(false);    // Disable typing
+    }
+
+    // Enter typing mode
+    private void enterTypingMode() {
+        textOverlay.setEnabled(true);      // Enable typing
+        textOverlay.requestFocus();        // Show keyboard
+        drawingView.setTouchEnabled(false); // Disable drawing
     }
 
     // Custom View for Drawing
