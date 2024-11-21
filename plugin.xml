@@ -4,13 +4,40 @@
         <clobbers target="Notes" />
     </js-module>
 
-<platform name="android">
+<!--<platform name="android">
     <config-file target="res/xml/config.xml" parent="/*">
         <feature name="NotesPlugin">
             <param name="android-package" value="com.example.notesplugin.NotesPlugin" />
         </feature>
     </config-file>
 
+    <source-file src="src/android/NotesPlugin.java" target-dir="src/com/example/notesplugin" />
+    <source-file src="src/android/NotesListActivity.java" target-dir="src/com/example/notesplugin" />
+    <source-file src="src/android/NoteEditorActivity.java" target-dir="src/com/example/notesplugin" />
+</platform>-->
+
+
+
+    <!-- Register plugin in Cordova's config.xml -->
+    <config-file target="res/xml/config.xml" parent="/*">
+        <feature name="NotesPlugin">
+            <param name="android-package" value="com.example.notesplugin.NotesPlugin" />
+        </feature>
+    </config-file>
+
+    <!-- Declare activities in AndroidManifest.xml -->
+    <config-file parent="/manifest/application" target="AndroidManifest.xml">
+        <activity android:name="com.example.notesplugin.NotesListActivity"
+                  android:exported="true"
+                  android:label="Notes List" />
+        <activity android:name="com.example.notesplugin.NoteEditorActivity"
+                  android:exported="true"
+                  android:label="Note Editor" />
+    </config-file>
+
+
+
+    <!-- Your plugin source files -->
     <source-file src="src/android/NotesPlugin.java" target-dir="src/com/example/notesplugin" />
     <source-file src="src/android/NotesListActivity.java" target-dir="src/com/example/notesplugin" />
     <source-file src="src/android/NoteEditorActivity.java" target-dir="src/com/example/notesplugin" />
