@@ -15,7 +15,7 @@ import android.widget.FrameLayout;
 public class NoteEditorActivity extends Activity {
 
     private DrawingView drawingView; // Custom view for drawing
-    private EditText textOverlay;    // Editable text overlay
+    private EditText textOverlay; // Editable text overlay
     private boolean isDrawingMode = true; // Start in drawing mode
 
     @Override
@@ -40,8 +40,9 @@ public class NoteEditorActivity extends Activity {
         textOverlay.setTextSize(16);                      // Font size
         textOverlay.setSingleLine(false);                 // Multiline input
         textOverlay.setPadding(20, 20, 20, 20);
+        textOverlay.setVisibility(View.GONE);             // Start hidden (drawing mode default)
         textOverlay.setLayoutParams(fullScreenParams);
-        layout.addView(textOverlay); // Add text overlay on top of drawing view
+        layout.addView(textOverlay);
 
         // Add toggle button
         Button toggleButton = new Button(this);
@@ -56,37 +57,25 @@ public class NoteEditorActivity extends Activity {
 
         // Set the content view
         setContentView(layout);
-
-        // Start in drawing mode
-        enterDrawingMode();
     }
 
     // Toggle between drawing and typing
     private void toggleMode(Button toggleButton) {
-        if (isDrawingMode) {
-            // Switch to typing mode
-            enterTypingMode();
-            toggleButton.setText("Toggle to Drawing");
-        } else {
-            // Switch to drawing mode
-            enterDrawingMode();
-            toggleButton.setText("Toggle to Typing");
-        }
         isDrawingMode = !isDrawingMode;
-    }
 
-    // Enter drawing mode
-    private void enterDrawingMode() {
-        textOverlay.clearFocus(); // Dismiss keyboard
-        drawingView.setTouchEnabled(true); // Enable drawing
-        textOverlay.setEnabled(false);    // Disable typing
-    }
-
-    // Enter typing mode
-    private void enterTypingMode() {
-        textOverlay.setEnabled(true);      // Enable typing
-        textOverlay.requestFocus();        // Show keyboard
-        drawingView.setTouchEnabled(false); // Disable drawing
+        if (isDrawingMode) {
+            // Enable drawing
+            textOverlay.clearFocus(); // Dismiss keyboard
+            textOverlay.setVisibility(View.GONE);
+            drawingView.setTouchEnabled(true);
+            toggleButton.setText("Toggle to Typing");
+        } else {
+            // Enable typing
+            textOverlay.requestFocus(); // Show keyboard
+            textOverlay.setVisibility(View.VISIBLE);
+            drawingView.setTouchEnabled(false);
+            toggleButton.setText("Toggle to Drawing");
+        }
     }
 
     // Custom View for Drawing
@@ -153,7 +142,6 @@ public class NoteEditorActivity extends Activity {
                     invalidate();
                     break;
             }
-
             return true;
         }
 
