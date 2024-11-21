@@ -301,8 +301,6 @@ import android.graphics.Color;
 import android.graphics.Paint;
 import android.graphics.Path;
 import android.os.Bundle;
-import android.text.Editable;
-import android.text.TextWatcher;
 import android.view.Gravity;
 import android.view.MotionEvent;
 import android.view.View;
@@ -348,12 +346,14 @@ public class NoteEditorActivity extends Activity {
         // Create a toolbar with a drawing button
         LinearLayout toolbar = new LinearLayout(this);
         toolbar.setOrientation(LinearLayout.HORIZONTAL);
-        toolbar.setGravity(Gravity.BOTTOM);
+        toolbar.setGravity(Gravity.CENTER);
         toolbar.setBackgroundColor(Color.DKGRAY);
-        toolbar.setLayoutParams(new FrameLayout.LayoutParams(
+        FrameLayout.LayoutParams toolbarParams = new FrameLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT,
                 150 // Fixed height for the toolbar
-        ));
+        );
+        toolbarParams.gravity = Gravity.BOTTOM;
+        toolbar.setLayoutParams(toolbarParams);
 
         // Add a drawing button to the toolbar
         ImageButton drawButton = new ImageButton(this);
@@ -412,25 +412,6 @@ public class NoteEditorActivity extends Activity {
             }
         });
 
-        // Add a listener for detecting when to add a new page
-        pageEditText.addTextChangedListener(new TextWatcher() {
-            @Override
-            public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
-
-            @Override
-            public void onTextChanged(CharSequence s, int start, int before, int count) {
-                // Calculate text height dynamically
-                int textHeight = pageEditText.getLineHeight() * pageEditText.getLineCount();
-                if (textHeight >= screenHeight - 200) { // Adjust for padding and margin
-                    pageEditText.removeTextChangedListener(this); // Prevent recursion
-                    createNewPage(); // Add a new page
-                }
-            }
-
-            @Override
-            public void afterTextChanged(Editable s) {}
-        });
-
         // Add the EditText to the page
         pageLayout.addView(pageEditText);
 
@@ -452,25 +433,29 @@ public class NoteEditorActivity extends Activity {
         if (currentActivePage == null) return;
 
         // Create a sketch area
-        SketchView sketchView = new SketchView(this);
+        ResizableSketchView sketchView = new ResizableSketchView(this);
         sketchView.setLayoutParams(new LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT,
-                500 // Fixed height for the sketch area
+                500 // Fixed initial height for the sketch area
         ));
-        sketchView.setBackgroundColor(Color.LTGRAY);
+        sketchView.setBackgroundColor(Color.TRANSPARENT);
 
         // Add the sketch area to the active page
         currentActivePage.addView(sketchView);
     }
 
-    // Custom View for the Sketch Area
-    private static class SketchView extends View {
+    // Custom View for the Resizable Sketch Area
+    private static class ResizableSketchView extends View {
 
         private final Paint paint;
         private final Path path;
+        private int height; // Current height of the sketch area
+        private boolean resizing = false;
 
-        public SketchView(@NonNull Activity context) {
+        public ResizableSketchView(@NonNull Activity context) {
             super(context);
+
+            // Initialize the sketch area
             paint = new Paint();
             paint.setColor(Color.BLACK);
             paint.setStyle(Paint.Style.STROKE);
@@ -479,12 +464,29 @@ public class NoteEditorActivity extends Activity {
             paint.setStrokeCap(Paint.Cap.ROUND);
 
             path = new Path();
+
+            // Add red borders
+            setPadding(10, 10, 10, 10); // Internal padding for borders
         }
 
         @Override
         protected void onDraw(android.graphics.Canvas canvas) {
             super.onDraw(canvas);
+
+            // Draw the sketch
             canvas.drawPath(path, paint);
+
+            // Draw red borders
+            Paint borderPaint = new Paint();
+            borderPaint.setColor(Color.RED);
+            borderPaint.setStyle(Paint.Style.STROKE);
+            borderPaint.setStrokeWidth(5);
+
+            // Top border
+            canvas.drawRect(0, 0, getWidth(), 10, borderPaint);
+
+            // Bottom border
+            canvas.drawRect(0, getHeight() - 10, getWidth(), getHeight(), borderPaint);
         }
 
         @Override
@@ -492,14 +494,31 @@ public class NoteEditorActivity extends Activity {
             float x = event.getX();
             float y = event.getY();
 
+            if (event.getAction() == MotionEvent.ACTION_MOVE && resizing) {
+                // Resize sketch area
+                ViewGroup.LayoutParams params = getLayoutParams();
+                params.height = (int) y;
+                setLayoutParams(params);
+                requestLayout();
+                return true;
+            }
+
             switch (event.getAction()) {
                 case MotionEvent.ACTION_DOWN:
-                    path.moveTo(x, y);
+                    if (y < 10 || y > getHeight() - 10) {
+                        resizing = true;
+                    } else {
+                        resizing = false;
+                        path.moveTo(x, y);
+                    }
                     break;
                 case MotionEvent.ACTION_MOVE:
-                    path.lineTo(x, y);
+                    if (!resizing) {
+                        path.lineTo(x, y);
+                    }
                     break;
                 case MotionEvent.ACTION_UP:
+                    resizing = false;
                     break;
             }
 
