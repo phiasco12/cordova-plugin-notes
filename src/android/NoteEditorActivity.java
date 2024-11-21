@@ -303,14 +303,14 @@ import android.graphics.Path;
 import android.os.Bundle;
 import android.text.Editable;
 import android.text.TextWatcher;
-import android.view.Gravity;
 import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.Button;
 import android.widget.EditText;
 import android.widget.FrameLayout;
-import android.widget.ImageButton;
 import android.widget.LinearLayout;
+import android.widget.ScrollView;
 
 import androidx.annotation.NonNull;
 
@@ -321,7 +321,6 @@ public class NoteEditorActivity extends Activity {
     private int screenHeight; // Screen height for creating full-page layouts
     private LinearLayout currentActivePage; // Tracks the currently active (focused) page
     private EditText currentActiveEditText; // Tracks the currently focused EditText
-    private boolean isDrawingMode = false; // Tracks whether drawing mode is active
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -345,32 +344,19 @@ public class NoteEditorActivity extends Activity {
         // Add the first page
         createNewPage();
 
-        // Add a toolbar with a toggle button
-        LinearLayout toolbar = new LinearLayout(this);
-        toolbar.setOrientation(LinearLayout.HORIZONTAL);
-        toolbar.setGravity(Gravity.BOTTOM);
-        toolbar.setBackgroundColor(Color.DKGRAY);
-        toolbar.setLayoutParams(new FrameLayout.LayoutParams(
+        // Add a button to add a sketch area
+        Button addSketchButton = new Button(this);
+        addSketchButton.setText("Add Sketch Area");
+        addSketchButton.setOnClickListener(v -> addSketchToActivePage());
+        addSketchButton.setLayoutParams(new FrameLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT,
-                150 // Fixed height for the toolbar
-        ));
-
-        // Add a button to toggle drawing mode
-        ImageButton toggleDrawButton = new ImageButton(this);
-        toggleDrawButton.setImageResource(android.R.drawable.ic_menu_edit); // Initial icon for drawing
-        toggleDrawButton.setBackgroundColor(Color.LTGRAY);
-        toggleDrawButton.setLayoutParams(new LinearLayout.LayoutParams(
-                300, // Fixed width
                 ViewGroup.LayoutParams.WRAP_CONTENT
         ));
-        toggleDrawButton.setOnClickListener(v -> toggleDrawingMode(toggleDrawButton));
 
-        toolbar.addView(toggleDrawButton);
-
-        // Create a layout to hold the toolbar and the ScrollView
+        // Create a layout to hold the button and the ScrollView
         FrameLayout mainLayout = new FrameLayout(this);
         mainLayout.addView(scrollView);
-        mainLayout.addView(toolbar);
+        mainLayout.addView(addSketchButton);
 
         // Set the main layout as the content view
         setContentView(mainLayout);
@@ -401,7 +387,7 @@ public class NoteEditorActivity extends Activity {
         pageEditText.setTextSize(16);
         pageEditText.setPadding(10, 10, 10, 10);
         pageEditText.setSingleLine(false);
-        pageEditText.setGravity(Gravity.TOP);
+        pageEditText.setGravity(android.view.Gravity.TOP);
         pageEditText.setVerticalScrollBarEnabled(false);
 
         // Add a listener to track the current active page
@@ -419,12 +405,11 @@ public class NoteEditorActivity extends Activity {
 
             @Override
             public void onTextChanged(CharSequence s, int start, int before, int count) {
-                if (!isDrawingMode) { // Only add new pages in typing mode
-                    int textHeight = pageEditText.getLineHeight() * pageEditText.getLineCount();
-                    if (textHeight >= screenHeight - 200) { // Adjust for padding and margin
-                        pageEditText.removeTextChangedListener(this); // Prevent recursion
-                        createNewPage(); // Add a new page
-                    }
+                // Calculate text height dynamically
+                int textHeight = pageEditText.getLineHeight() * pageEditText.getLineCount();
+                if (textHeight >= screenHeight - 200) { // Adjust for padding and margin
+                    pageEditText.removeTextChangedListener(this); // Prevent recursion
+                    createNewPage(); // Add a new page
                 }
             }
 
@@ -447,22 +432,6 @@ public class NoteEditorActivity extends Activity {
             scrollView.smoothScrollTo(0, pageLayout.getTop());
             pageEditText.requestFocus();
         });
-    }
-
-    private void toggleDrawingMode(ImageButton toggleButton) {
-        isDrawingMode = !isDrawingMode; // Toggle mode
-
-        if (isDrawingMode) {
-            // Switch to drawing mode
-            toggleButton.setImageResource(android.R.drawable.ic_menu_edit); // Set drawing icon
-            if (currentActiveEditText != null) {
-                currentActiveEditText.clearFocus(); // Clear focus from the EditText
-            }
-            addSketchToActivePage(); // Add a sketch area to the active page if not already present
-        } else {
-            // Switch back to typing mode
-            toggleButton.setImageResource(android.R.drawable.ic_menu_view); // Set text icon
-        }
     }
 
     private void addSketchToActivePage() {
