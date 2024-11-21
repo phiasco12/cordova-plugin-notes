@@ -1,0 +1,28 @@
+<plugin id="cordova-plugin-notes" version="1.0.0" xmlns="http://apache.org/cordova/ns/plugins/1.0">
+    <name>NotesPlugin</name>
+    <js-module src="www/notes.js" name="Notes">
+        <clobbers target="Notes" />
+    </js-module>
+
+    <platform name="android">
+        <config-file target="res/xml/config.xml" parent="/*">
+            <feature name="NotesPlugin">
+                <param name="android-package" value="com.example.notesplugin.NotesPlugin" />
+            </feature>
+        </config-file>
+        <source-file src="src/android/NotesPlugin.java" target-dir="src/com/example/notesplugin" />
+        <source-file src="src/android/NotesListActivity.java" target-dir="src/com/example/notesplugin" />
+        <source-file src="src/android/NoteEditorActivity.java" target-dir="src/com/example/notesplugin" />
+    </platform>
+
+    <platform name="ios">
+        <config-file target="config.xml" parent="/*">
+            <feature name="NotesPlugin">
+                <param name="ios-package" value="NotesPlugin" />
+            </feature>
+        </config-file>
+        <source-file src="src/ios/NotesPlugin.swift" />
+        <source-file src="src/ios/NotesListViewController.swift" />
+        <source-file src="src/ios/NoteEditorViewController.swift" />
+    </platform>
+</plugin>
