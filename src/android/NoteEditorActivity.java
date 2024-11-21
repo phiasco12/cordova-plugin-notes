@@ -20,16 +20,15 @@ public class NoteEditorActivity extends Activity {
     private DrawingView drawingView;
     private EditText textOverlay;
     private boolean isDrawingMode = true; // Start in drawing mode
-    private Bitmap savedBitmap; // For saving drawing content
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
-        // Create the main container
+        // Main container
         FrameLayout layout = new FrameLayout(this);
 
-        // Initialize the drawing canvas
+        // Drawing canvas
         drawingView = new DrawingView(this);
         FrameLayout.LayoutParams fullScreenParams = new FrameLayout.LayoutParams(
                 FrameLayout.LayoutParams.MATCH_PARENT,
@@ -37,7 +36,7 @@ public class NoteEditorActivity extends Activity {
         );
         layout.addView(drawingView, fullScreenParams);
 
-        // Initialize the text overlay
+        // Text overlay
         textOverlay = new EditText(this);
         textOverlay.setBackgroundColor(Color.TRANSPARENT); // Transparent background
         textOverlay.setTextColor(Color.BLACK);            // Black text
@@ -47,7 +46,7 @@ public class NoteEditorActivity extends Activity {
         textOverlay.setLayoutParams(fullScreenParams);
         layout.addView(textOverlay);
 
-        // Add toggle button
+        // Toggle button
         Button toggleButton = new Button(this);
         toggleButton.setText("Toggle to Typing");
         toggleButton.setOnClickListener(v -> toggleMode(toggleButton));
@@ -58,7 +57,7 @@ public class NoteEditorActivity extends Activity {
         toggleParams.setMargins(20, 20, 20, 0); // Top-left margin
         layout.addView(toggleButton, toggleParams);
 
-        // Add save button
+        // Save button
         Button saveButton = new Button(this);
         saveButton.setText("Save");
         saveButton.setOnClickListener(v -> saveContent());
@@ -73,62 +72,63 @@ public class NoteEditorActivity extends Activity {
         setContentView(layout);
     }
 
-    // Toggle between drawing and typing modes
+    // Toggle between drawing and typing
     private void toggleMode(Button toggleButton) {
         isDrawingMode = !isDrawingMode;
 
         if (isDrawingMode) {
-            // Enable drawing
-            textOverlay.clearFocus(); // Dismiss the keyboard
+            textOverlay.clearFocus(); // Dismiss keyboard
             drawingView.setTouchEnabled(true);
             toggleButton.setText("Toggle to Typing");
         } else {
-            // Enable typing
-            textOverlay.requestFocus(); // Show the keyboard
+            textOverlay.requestFocus(); // Show keyboard
             drawingView.setTouchEnabled(false);
             toggleButton.setText("Toggle to Drawing");
         }
     }
 
-    // Save the current drawing and text content
+    // Save the drawing and text
     private void saveContent() {
-        // Save the drawing as a Bitmap
         Bitmap combinedBitmap = Bitmap.createBitmap(drawingView.getWidth(), drawingView.getHeight(), Bitmap.Config.ARGB_8888);
         Canvas canvas = new Canvas(combinedBitmap);
-        drawingView.draw(canvas); // Draw the canvas content
-        textOverlay.draw(canvas); // Overlay the text content
 
-        // Convert the bitmap to a byte array
+        // Draw the canvas content
+        drawingView.draw(canvas);
+
+        // Draw the text overlay content
+        textOverlay.draw(canvas);
+
+        // Convert bitmap to byte array
         ByteArrayOutputStream stream = new ByteArrayOutputStream();
         combinedBitmap.compress(Bitmap.CompressFormat.PNG, 100, stream);
-        byte[] bitmapBytes = stream.toByteArray();
+        byte[] noteBytes = stream.toByteArray();
 
-        // Return the data to the previous activity
+        // Return the note data to the NotesListActivity
         Intent resultIntent = new Intent();
-        resultIntent.putExtra("noteImage", bitmapBytes);
+        resultIntent.putExtra("noteImage", noteBytes);
         setResult(RESULT_OK, resultIntent);
         finish();
     }
 
-    // Custom View for Drawing
+    // Custom view for drawing
     private class DrawingView extends View {
         private Paint paint;
         private Canvas canvas;
         private Bitmap bitmap;
-        private boolean touchEnabled = true; // Toggle touch handling
+        private boolean touchEnabled = true; // Control touch interaction
         private float lastX, lastY;
 
         public DrawingView(Activity context) {
             super(context);
 
-            // Initialize the paint
+            // Initialize paint
             paint = new Paint();
-            paint.setColor(Color.BLUE); // Drawing color
-            paint.setStrokeWidth(8f);  // Line thickness
+            paint.setColor(Color.BLUE);
+            paint.setStrokeWidth(8f);
             paint.setStyle(Paint.Style.STROKE);
             paint.setAntiAlias(true);
 
-            // Initialize the bitmap
+            // Initialize bitmap
             bitmap = Bitmap.createBitmap(1000, 1000, Bitmap.Config.ARGB_8888);
             canvas = new Canvas(bitmap);
         }
@@ -156,7 +156,7 @@ public class NoteEditorActivity extends Activity {
                     canvas.drawLine(lastX, lastY, x, y, paint);
                     lastX = x;
                     lastY = y;
-                    invalidate(); // Redraw the canvas
+                    invalidate(); // Redraw canvas
                     break;
             }
             return true;
