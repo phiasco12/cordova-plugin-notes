@@ -18,7 +18,7 @@ public class NoteEditorActivity extends Activity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
-        // Create a main container
+        // Create the main container
         FrameLayout layout = new FrameLayout(this);
 
         // Initialize the drawing view
@@ -27,7 +27,7 @@ public class NoteEditorActivity extends Activity {
                 FrameLayout.LayoutParams.MATCH_PARENT,
                 FrameLayout.LayoutParams.MATCH_PARENT
         );
-        layout.addView(drawingView, fullScreenParams);
+        layout.addView(drawingView, fullScreenParams); // Add drawing view with full-screen layout
 
         // Set the content view
         setContentView(layout);
@@ -50,9 +50,18 @@ public class NoteEditorActivity extends Activity {
             paint.setStyle(Paint.Style.STROKE);
             paint.setAntiAlias(true);
 
-            // Initialize a bitmap to store the drawing
-            bitmap = Bitmap.createBitmap(1000, 1000, Bitmap.Config.ARGB_8888);
+            // Initialize a bitmap to store the drawing, matching the view's size
+            bitmap = Bitmap.createBitmap(1080, 1920, Bitmap.Config.ARGB_8888); // Placeholder size; updated dynamically
             canvas = new Canvas(bitmap); // Canvas to draw on
+        }
+
+        @Override
+        protected void onSizeChanged(int w, int h, int oldw, int oldh) {
+            super.onSizeChanged(w, h, oldw, oldh);
+
+            // Resize the bitmap to match the view size
+            bitmap = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888);
+            canvas = new Canvas(bitmap);
         }
 
         @Override
@@ -77,7 +86,7 @@ public class NoteEditorActivity extends Activity {
 
                 case MotionEvent.ACTION_MOVE:
                     // Draw a line between the last position and the current position
-                    canvas.drawLine(lastX, lastY, x, y, paint);
+                    this.canvas.drawLine(lastX, lastY, x, y, paint);
                     lastX = x;
                     lastY = y;
 
@@ -90,4 +99,3 @@ public class NoteEditorActivity extends Activity {
         }
     }
 }
-
