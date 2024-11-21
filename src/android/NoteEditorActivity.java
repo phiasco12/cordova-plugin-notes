@@ -163,6 +163,7 @@ import android.graphics.Color;
 import android.os.Bundle;
 import android.text.Editable;
 import android.text.TextWatcher;
+import android.view.ViewGroup;
 import android.widget.EditText;
 import android.widget.FrameLayout;
 import android.widget.LinearLayout;
@@ -171,21 +172,23 @@ import android.widget.ScrollView;
 public class NoteEditorActivity extends Activity {
 
     private LinearLayout pagesContainer; // Container for all pages
-    private static final int PAGE_HEIGHT = 1600; // Example page height for pagination (adjust for your device)
-    private static final int PAGE_WIDTH = FrameLayout.LayoutParams.MATCH_PARENT;
+    private int screenHeight; // Screen height for 100% height calculation
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
-        // Main container with a ScrollView for vertical pagination
+        // Get screen height dynamically
+        screenHeight = getResources().getDisplayMetrics().heightPixels;
+
+        // Main ScrollView container
         ScrollView scrollView = new ScrollView(this);
         scrollView.setLayoutParams(new FrameLayout.LayoutParams(
                 FrameLayout.LayoutParams.MATCH_PARENT,
                 FrameLayout.LayoutParams.MATCH_PARENT
         ));
 
-        // LinearLayout to hold all pages
+        // LinearLayout to hold pages vertically
         pagesContainer = new LinearLayout(this);
         pagesContainer.setOrientation(LinearLayout.VERTICAL);
         scrollView.addView(pagesContainer);
@@ -199,27 +202,29 @@ public class NoteEditorActivity extends Activity {
 
     // Add a new page
     private void addNewPage() {
+        // Create a page container with 100% screen height
         FrameLayout pageLayout = new FrameLayout(this);
         pageLayout.setLayoutParams(new LinearLayout.LayoutParams(
-                PAGE_WIDTH,
-                PAGE_HEIGHT
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                screenHeight // Full screen height
         ));
-        pageLayout.setBackgroundColor(Color.WHITE); // Background color for each page
+        pageLayout.setBackgroundColor(Color.WHITE); // White background for the page
 
-        // Add an EditText to the page
+        // Add an EditText for typing
         EditText pageEditText = new EditText(this);
         pageEditText.setBackgroundColor(Color.TRANSPARENT); // Transparent background
-        pageEditText.setTextColor(Color.BLACK);             // Text color
+        pageEditText.setTextColor(Color.BLACK);             // Black text color
         pageEditText.setTextSize(16);                       // Font size
-        pageEditText.setPadding(20, 20, 20, 20);            // Padding inside the EditText
+        pageEditText.setPadding(20, 20, 20, 20);            // Add padding inside the EditText
         pageEditText.setLayoutParams(new FrameLayout.LayoutParams(
                 FrameLayout.LayoutParams.MATCH_PARENT,
                 FrameLayout.LayoutParams.MATCH_PARENT
         ));
-        pageEditText.setSingleLine(false);                  // Allow multiline text
-        pageEditText.setVerticalScrollBarEnabled(false);    // Disable vertical scrolling for the EditText
+        pageEditText.setSingleLine(false);                  // Multiline text enabled
+        pageEditText.setVerticalScrollBarEnabled(false);    // Disable EditText scrolling
+        pageEditText.setGravity(android.view.Gravity.TOP);  // Start typing from the top
 
-        // Add a listener to detect when to create a new page
+        // Add a listener to detect when a new page should be added
         pageEditText.addTextChangedListener(new TextWatcher() {
             @Override
             public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
@@ -227,8 +232,9 @@ public class NoteEditorActivity extends Activity {
             @Override
             public void onTextChanged(CharSequence s, int start, int before, int count) {
                 // Check if text height exceeds the current page height
-                if (pageEditText.getLineCount() * pageEditText.getLineHeight() >= PAGE_HEIGHT) {
-                    pageEditText.removeTextChangedListener(this); // Remove listener to prevent infinite recursion
+                int totalLinesHeight = pageEditText.getLineHeight() * pageEditText.getLineCount();
+                if (totalLinesHeight >= screenHeight) {
+                    pageEditText.removeTextChangedListener(this); // Remove listener to avoid recursion
                     addNewPage(); // Add a new page
                 }
             }
@@ -237,7 +243,7 @@ public class NoteEditorActivity extends Activity {
             public void afterTextChanged(Editable s) {}
         });
 
-        // Add the EditText to the page layout
+        // Add the EditText to the page
         pageLayout.addView(pageEditText);
 
         // Add the page to the pages container
