@@ -303,17 +303,16 @@ import android.text.Editable;
 import android.text.TextWatcher;
 import android.view.ViewGroup;
 import android.widget.EditText;
-import android.widget.FrameLayout;
 import android.widget.LinearLayout;
 import android.widget.ScrollView;
 import android.view.View;
 
 public class NoteEditorActivity extends Activity {
 
-    private LinearLayout pagesContainer; // Container for all pages
-    private int screenHeight; // Screen height for 100% height calculation
-    private EditText currentEditText; // Reference to the current active EditText
-    private ScrollView scrollView; // ScrollView to manage scrolling
+    private LinearLayout pagesContainer; // Container for pages
+    private ScrollView scrollView; // Main scrollable container
+    private int screenHeight; // Screen height for creating full-page layouts
+    private EditText activeEditText; // Current EditText for writing
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -322,76 +321,61 @@ public class NoteEditorActivity extends Activity {
         // Get screen height dynamically
         screenHeight = getResources().getDisplayMetrics().heightPixels;
 
-        // Main ScrollView container
+        // Initialize the ScrollView
         scrollView = new ScrollView(this);
-        scrollView.setLayoutParams(new FrameLayout.LayoutParams(
-                FrameLayout.LayoutParams.MATCH_PARENT,
-                FrameLayout.LayoutParams.MATCH_PARENT
+        scrollView.setLayoutParams(new ViewGroup.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.MATCH_PARENT
         ));
 
-        // LinearLayout to hold pages vertically
+        // LinearLayout for holding pages
         pagesContainer = new LinearLayout(this);
         pagesContainer.setOrientation(LinearLayout.VERTICAL);
         scrollView.addView(pagesContainer);
 
         // Add the first page
-        addNewPage();
+        createNewPage();
 
-        // Set the ScrollView as the main content
+        // Set ScrollView as the content view
         setContentView(scrollView);
     }
 
-    // Add a new page
-    private void addNewPage() {
-        // Create a separator for visual distinction
-        if (pagesContainer.getChildCount() > 0) {
-            View separator = new View(this);
-            LinearLayout.LayoutParams separatorParams = new LinearLayout.LayoutParams(
-                    ViewGroup.LayoutParams.MATCH_PARENT,
-                    4 // Height of the separator (e.g., 4px)
-            );
-            separator.setBackgroundColor(Color.LTGRAY); // Light gray for the separator
-            separator.setLayoutParams(separatorParams);
-            pagesContainer.addView(separator);
-        }
-
-        // Create a page container with 100% screen height
-        FrameLayout pageLayout = new FrameLayout(this);
+    private void createNewPage() {
+        // Create a container for a single page
+        LinearLayout pageLayout = new LinearLayout(this);
+        pageLayout.setOrientation(LinearLayout.VERTICAL);
         pageLayout.setLayoutParams(new LinearLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT,
-                screenHeight // Full screen height
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                screenHeight
         ));
-        pageLayout.setBackgroundColor(Color.WHITE); // White background for the page
+        pageLayout.setBackgroundColor(Color.WHITE);
 
-        // Add an EditText for typing
+        // Create an EditText for writing
         EditText pageEditText = new EditText(this);
-        pageEditText.setBackgroundColor(Color.TRANSPARENT); // Transparent background
-        pageEditText.setTextColor(Color.BLACK);             // Black text color
-        pageEditText.setTextSize(16);                       // Font size
-        pageEditText.setPadding(20, 40, 20, 40);            // Add padding inside the EditText
-        pageEditText.setLayoutParams(new FrameLayout.LayoutParams(
-                FrameLayout.LayoutParams.MATCH_PARENT,
-                FrameLayout.LayoutParams.MATCH_PARENT
+        pageEditText.setLayoutParams(new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.MATCH_PARENT
         ));
-        pageEditText.setSingleLine(false);                  // Multiline text enabled
-        pageEditText.setVerticalScrollBarEnabled(false);    // Disable EditText scrolling
-        pageEditText.setGravity(android.view.Gravity.TOP);  // Start typing from the top
+        pageEditText.setBackgroundColor(Color.TRANSPARENT);
+        pageEditText.setTextColor(Color.BLACK);
+        pageEditText.setTextSize(16);
+        pageEditText.setPadding(20, 20, 20, 20);
+        pageEditText.setSingleLine(false);
+        pageEditText.setGravity(android.view.Gravity.TOP);
+        pageEditText.setVerticalScrollBarEnabled(false);
 
-        // Set this page's EditText as the currentEditText
-        currentEditText = pageEditText;
-
-        // Add a listener to detect when a new page should be added
+        // Add a listener for detecting when to add a new page
         pageEditText.addTextChangedListener(new TextWatcher() {
             @Override
             public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
 
             @Override
             public void onTextChanged(CharSequence s, int start, int before, int count) {
-                // Check if text height exceeds the current page height
-                int totalLinesHeight = pageEditText.getLineHeight() * pageEditText.getLineCount();
-                if (totalLinesHeight > screenHeight - 100) { // Adjust for padding and separators
-                    addNewPage(); // Add a new page
-                    currentEditText.requestFocus(); // Automatically move focus to the new page
+                // Calculate text height dynamically
+                int textHeight = pageEditText.getLineHeight() * pageEditText.getLineCount();
+                if (textHeight >= screenHeight - 100) {
+                    pageEditText.removeTextChangedListener(this); // Prevent recursion
+                    createNewPage(); // Add a new page
                 }
             }
 
@@ -399,18 +383,14 @@ public class NoteEditorActivity extends Activity {
             public void afterTextChanged(Editable s) {}
         });
 
-        // Focus listener to adjust scrolling
-        pageEditText.setOnFocusChangeListener((v, hasFocus) -> {
-            if (hasFocus) {
-                // Ensure proper scroll positioning on focus
-                scrollView.post(() -> scrollView.smoothScrollTo(0, pageEditText.getTop()));
-            }
-        });
-
         // Add the EditText to the page
         pageLayout.addView(pageEditText);
 
-        // Add the page to the pages container
+        // Add the new page to the container
         pagesContainer.addView(pageLayout);
+
+        // Set focus to the new EditText
+        activeEditText = pageEditText;
+        activeEditText.requestFocus();
     }
 }
