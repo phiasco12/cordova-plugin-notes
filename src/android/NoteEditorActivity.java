@@ -156,7 +156,7 @@ public class NoteEditorActivity extends Activity {
 
 
 
-package com.example.notesplugin;
+/*package com.example.notesplugin;
 
 import android.app.Activity;
 import android.graphics.Color;
@@ -288,4 +288,140 @@ public class NoteEditorActivity extends Activity {
         // Add the page to the pages container
         pagesContainer.addView(pageLayout);
     }
+}*/
+
+
+
+
+
+package com.example.notesplugin;
+
+import android.app.Activity;
+import android.graphics.Color;
+import android.os.Bundle;
+import android.text.Editable;
+import android.text.TextWatcher;
+import android.view.ViewGroup;
+import android.widget.EditText;
+import android.widget.FrameLayout;
+import android.widget.LinearLayout;
+import android.widget.ScrollView;
+import android.view.View;
+
+public class NoteEditorActivity extends Activity {
+
+    private LinearLayout pagesContainer; // Container for all pages
+    private int screenHeight; // Screen height for 100% height calculation
+    private EditText currentEditText; // Reference to the current active EditText
+    private ScrollView scrollView; // ScrollView to manage scrolling
+
+    @Override
+    protected void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+
+        // Get screen height dynamically
+        screenHeight = getResources().getDisplayMetrics().heightPixels;
+
+        // Main ScrollView container
+        scrollView = new ScrollView(this) {
+            @Override
+            protected void onScrollChanged(int l, int t, int oldl, int oldt) {
+                super.onScrollChanged(l, t, oldl, oldt);
+                // Smooth scrolling logic (can customize if needed)
+            }
+        };
+
+        scrollView.setLayoutParams(new FrameLayout.LayoutParams(
+                FrameLayout.LayoutParams.MATCH_PARENT,
+                FrameLayout.LayoutParams.MATCH_PARENT
+        ));
+
+        // LinearLayout to hold pages vertically
+        pagesContainer = new LinearLayout(this);
+        pagesContainer.setOrientation(LinearLayout.VERTICAL);
+        scrollView.addView(pagesContainer);
+
+        // Add the first page
+        addNewPage();
+
+        // Set the ScrollView as the main content
+        setContentView(scrollView);
+    }
+
+    // Add a new page
+    private void addNewPage() {
+        // Create a separator for visual distinction
+        if (pagesContainer.getChildCount() > 0) {
+            View separator = new View(this);
+            LinearLayout.LayoutParams separatorParams = new LinearLayout.LayoutParams(
+                    ViewGroup.LayoutParams.MATCH_PARENT,
+                    4 // Height of the separator (e.g., 4px)
+            );
+            separator.setBackgroundColor(Color.LTGRAY); // Light gray for the separator
+            separator.setLayoutParams(separatorParams);
+            pagesContainer.addView(separator);
+        }
+
+        // Create a page container with 100% screen height
+        FrameLayout pageLayout = new FrameLayout(this);
+        pageLayout.setLayoutParams(new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                screenHeight // Full screen height
+        ));
+        pageLayout.setBackgroundColor(Color.WHITE); // White background for the page
+
+        // Add an EditText for typing
+        EditText pageEditText = new EditText(this);
+        pageEditText.setBackgroundColor(Color.TRANSPARENT); // Transparent background
+        pageEditText.setTextColor(Color.BLACK);             // Black text color
+        pageEditText.setTextSize(16);                       // Font size
+        pageEditText.setPadding(20, 40, 20, 40);            // Add padding inside the EditText
+        pageEditText.setLayoutParams(new FrameLayout.LayoutParams(
+                FrameLayout.LayoutParams.MATCH_PARENT,
+                FrameLayout.LayoutParams.MATCH_PARENT
+        ));
+        pageEditText.setSingleLine(false);                  // Multiline text enabled
+        pageEditText.setVerticalScrollBarEnabled(false);    // Disable EditText scrolling
+        pageEditText.setGravity(android.view.Gravity.TOP);  // Start typing from the top
+
+        // Set this page's EditText as the currentEditText
+        currentEditText = pageEditText;
+
+        // Add a listener to detect when a new page should be added
+        pageEditText.addTextChangedListener(new TextWatcher() {
+            @Override
+            public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
+
+            @Override
+            public void onTextChanged(CharSequence s, int start, int before, int count) {
+                // Check if text height exceeds the current page height
+                int totalLinesHeight = pageEditText.getLineHeight() * pageEditText.getLineCount();
+                if (totalLinesHeight >= screenHeight - 40) { // Adjust for padding
+                    pageEditText.removeTextChangedListener(this); // Remove listener to avoid recursion
+                    addNewPage(); // Add a new page
+
+                    // Automatically move focus to the new page's EditText
+                    currentEditText.requestFocus();
+                }
+            }
+
+            @Override
+            public void afterTextChanged(Editable s) {}
+        });
+
+        // Focus listener to adjust scrolling
+        pageEditText.setOnFocusChangeListener((v, hasFocus) -> {
+            if (hasFocus) {
+                // Scroll to the EditText when it gains focus
+                scrollView.post(() -> scrollView.smoothScrollTo(0, pageEditText.getTop() - 20));
+            }
+        });
+
+        // Add the EditText to the page
+        pageLayout.addView(pageEditText);
+
+        // Add the page to the pages container
+        pagesContainer.addView(pageLayout);
+    }
 }
+
