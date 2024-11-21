@@ -342,11 +342,6 @@ public class NoteEditorActivity extends Activity {
         // Add the first page
         addNewPage();
 
-        // Ensure padding/margin adjustments for proper scrolling
-        scrollView.setPadding(0, 0, 0, 0);
-        scrollView.setClipToPadding(false);
-        scrollView.setFillViewport(true);
-
         // Set the ScrollView as the main content
         setContentView(scrollView);
     }
@@ -401,7 +396,7 @@ public class NoteEditorActivity extends Activity {
 
             @Override
             public void onTextChanged(CharSequence s, int start, int before, int count) {
-                adjustPagesOverflow();
+                redistributeText();
             }
 
             @Override
@@ -418,8 +413,8 @@ public class NoteEditorActivity extends Activity {
         pageEditTexts.add(pageEditText);
     }
 
-    // Adjust pages for overflow
-    private void adjustPagesOverflow() {
+    // Redistribute text between pages
+    private void redistributeText() {
         for (int i = 0; i < pageEditTexts.size(); i++) {
             EditText currentPage = pageEditTexts.get(i);
 
