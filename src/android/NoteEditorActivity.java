@@ -256,10 +256,9 @@ public class NoteEditorActivity extends Activity {
             public void afterTextChanged(Editable s) {}
         });
 
-        // Handle pasting long text
+        // Handle focus changes for scrolling
         pageEditText.setOnFocusChangeListener((v, hasFocus) -> {
             if (hasFocus) {
-                // Scroll to the EditText when it gains focus
                 scrollView.post(() -> scrollView.smoothScrollTo(0, pageEditText.getTop()));
             }
         });
@@ -300,7 +299,7 @@ public class NoteEditorActivity extends Activity {
         int lineHeight = pageEditText.getLineHeight();
         int linesThatFit = screenHeight / lineHeight;
         int totalCharacters = pageEditText.getText().length();
-        int charactersPerLine = totalCharacters / pageEditText.getLineCount();
+        int charactersPerLine = Math.max(1, totalCharacters / pageEditText.getLineCount());
 
         return linesThatFit * charactersPerLine; // Estimate characters that fit in the page
     }
