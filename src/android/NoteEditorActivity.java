@@ -319,6 +319,7 @@ public class NoteEditorActivity extends Activity {
     private ScrollView scrollView; // Main scrollable container
     private int screenHeight; // Screen height for creating full-page layouts
     private LinearLayout currentActivePage; // Tracks the currently active (focused) page
+    private EditText currentActiveEditText; // Tracks the currently focused EditText
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -392,6 +393,7 @@ public class NoteEditorActivity extends Activity {
         pageEditText.setOnFocusChangeListener((v, hasFocus) -> {
             if (hasFocus) {
                 currentActivePage = pageLayout;
+                currentActiveEditText = pageEditText;
             }
         });
 
@@ -420,8 +422,15 @@ public class NoteEditorActivity extends Activity {
         // Add the new page to the container
         pagesContainer.addView(pageLayout);
 
-        // Set the new page as the active page
+        // Set the new page as the active page and focus its EditText
         currentActivePage = pageLayout;
+        currentActiveEditText = pageEditText;
+
+        // Scroll to the new page and request focus
+        scrollView.post(() -> {
+            scrollView.smoothScrollTo(0, pageLayout.getTop());
+            pageEditText.requestFocus();
+        });
     }
 
     private void addSketchToActivePage() {
