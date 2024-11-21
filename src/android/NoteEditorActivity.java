@@ -309,30 +309,27 @@ public class NoteEditorActivity extends Activity {
             paint.setStrokeWidth(8f);  // Line thickness
             paint.setStyle(Paint.Style.STROKE);
             paint.setAntiAlias(true);
-
-            // Initialize a bitmap to store the drawing
-            bitmap = Bitmap.createBitmap(1000, 1000, Bitmap.Config.ARGB_8888);
-            canvas = new Canvas(bitmap); // Canvas to draw on
         }
 
-@Override
-protected void onSizeChanged(int w, int h, int oldw, int oldh) {
-    super.onSizeChanged(w, h, oldw, oldh);
+        @Override
+        protected void onSizeChanged(int w, int h, int oldw, int oldh) {
+            super.onSizeChanged(w, h, oldw, oldh);
 
-    // Check that width and height are greater than 0
-    if (w > 0 && h > 0) {
-        bitmap = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888);
-        canvas = new Canvas(bitmap);
-    }
-}
-
+            // Check that width and height are greater than 0
+            if (w > 0 && h > 0) {
+                bitmap = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888);
+                canvas = new Canvas(bitmap);
+            }
+        }
 
         @Override
         protected void onDraw(Canvas canvas) {
             super.onDraw(canvas);
 
             // Draw the bitmap on the canvas
-            canvas.drawBitmap(bitmap, 0, 0, null);
+            if (bitmap != null) {
+                canvas.drawBitmap(bitmap, 0, 0, null);
+            }
         }
 
         @Override
@@ -351,7 +348,9 @@ protected void onSizeChanged(int w, int h, int oldw, int oldh) {
 
                 case MotionEvent.ACTION_MOVE:
                     // Draw a line between the last position and the current position
-                    canvas.drawLine(lastX, lastY, x, y, paint);
+                    if (canvas != null) {
+                        canvas.drawLine(lastX, lastY, x, y, paint);
+                    }
                     lastX = x;
                     lastY = y;
 
