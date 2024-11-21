@@ -292,7 +292,6 @@ public class NoteEditorActivity extends Activity {
 
 
 
-
 package com.example.notesplugin;
 
 import android.app.Activity;
@@ -305,9 +304,9 @@ import android.text.TextWatcher;
 import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.Button;
 import android.widget.EditText;
 import android.widget.FrameLayout;
+import android.widget.ImageButton;
 import android.widget.LinearLayout;
 import android.widget.ScrollView;
 
@@ -320,6 +319,7 @@ public class NoteEditorActivity extends Activity {
     private int screenHeight; // Screen height for creating full-page layouts
     private LinearLayout currentActivePage; // Tracks the currently active (focused) page
     private EditText currentActiveEditText; // Tracks the currently focused EditText
+    private boolean isDrawingMode = false; // Tracks if the app is in drawing mode
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -343,22 +343,63 @@ public class NoteEditorActivity extends Activity {
         // Add the first page
         createNewPage();
 
-        // Add a button to add a sketch area
-        Button addSketchButton = new Button(this);
-        addSketchButton.setText("Add Sketch Area");
-        addSketchButton.setOnClickListener(v -> addSketchToActivePage());
-        addSketchButton.setLayoutParams(new FrameLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT,
-                ViewGroup.LayoutParams.WRAP_CONTENT
-        ));
-
-        // Create a layout to hold the button and the ScrollView
+        // Add a toolbar with toggle button
         FrameLayout mainLayout = new FrameLayout(this);
         mainLayout.addView(scrollView);
-        mainLayout.addView(addSketchButton);
+        mainLayout.addView(createToolbar());
 
         // Set the main layout as the content view
         setContentView(mainLayout);
+    }
+
+    private View createToolbar() {
+        // Create a bottom toolbar
+        LinearLayout toolbar = new LinearLayout(this);
+        toolbar.setOrientation(LinearLayout.HORIZONTAL);
+        toolbar.setBackgroundColor(Color.DKGRAY);
+        toolbar.setPadding(10, 10, 10, 10);
+
+        // Create a toggle button for drawing mode
+        ImageButton toggleButton = new ImageButton(this);
+        toggleButton.setImageResource(android.R.drawable.ic_menu_edit); // Default to drawing icon
+        toggleButton.setBackgroundColor(Color.TRANSPARENT);
+        toggleButton.setOnClickListener(v -> toggleDrawingMode(toggleButton));
+        toolbar.addView(toggleButton, new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.WRAP_CONTENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+        ));
+
+        // Position the toolbar at the bottom
+        FrameLayout.LayoutParams toolbarParams = new FrameLayout.LayoutParams(
+                FrameLayout.LayoutParams.MATCH_PARENT,
+                FrameLayout.LayoutParams.WRAP_CONTENT
+        );
+        toolbarParams.setMargins(0, 0, 0, 0);
+        toolbarParams.gravity = android.view.Gravity.BOTTOM;
+        toolbar.setLayoutParams(toolbarParams);
+
+        return toolbar;
+    }
+
+    private void toggleDrawingMode(ImageButton toggleButton) {
+        isDrawingMode = !isDrawingMode;
+
+        if (isDrawingMode) {
+            // Enter drawing mode
+            toggleButton.setImageResource(android.R.drawable.ic_menu_add); // Change icon to "T"
+            if (currentActiveEditText != null) {
+                currentActiveEditText.clearFocus(); // Remove focus from EditText
+                currentActiveEditText.setEnabled(false); // Disable typing
+            }
+            scrollView.setScrollingEnabled(false); // Disable scrolling
+        } else {
+            // Exit drawing mode
+            toggleButton.setImageResource(android.R.drawable.ic_menu_edit); // Change icon to drawing
+            if (currentActiveEditText != null) {
+                currentActiveEditText.setEnabled(true); // Re-enable typing
+            }
+            scrollView.setScrollingEnabled(true); // Re-enable scrolling
+        }
     }
 
     private void createNewPage() {
@@ -433,22 +474,6 @@ public class NoteEditorActivity extends Activity {
         });
     }
 
-    private void addSketchToActivePage() {
-        if (currentActivePage == null) return;
-
-        // Create a sketch area
-        SketchView sketchView = new SketchView(this);
-        sketchView.setLayoutParams(new LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT,
-                500 // Fixed height for the sketch area
-        ));
-        sketchView.setBackgroundColor(Color.LTGRAY);
-
-        // Add the sketch area to the active page
-        currentActivePage.addView(sketchView);
-    }
-
-    // Custom View for the Sketch Area
     private static class SketchView extends View {
 
         private final Paint paint;
