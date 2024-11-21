@@ -8,11 +8,15 @@ import android.graphics.Paint;
 import android.os.Bundle;
 import android.view.MotionEvent;
 import android.view.View;
+import android.widget.Button;
+import android.widget.EditText;
 import android.widget.FrameLayout;
 
 public class NoteEditorActivity extends Activity {
 
     private DrawingView drawingView; // Custom view for drawing
+    private EditText textOverlay; // Editable text overlay
+    private boolean isDrawingMode = true; // Start in drawing mode
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -29,8 +33,49 @@ public class NoteEditorActivity extends Activity {
         );
         layout.addView(drawingView, fullScreenParams); // Add drawing view with full-screen layout
 
+        // Initialize the text overlay
+        textOverlay = new EditText(this);
+        textOverlay.setBackgroundColor(Color.TRANSPARENT); // Transparent background
+        textOverlay.setTextColor(Color.BLACK);            // Black text
+        textOverlay.setTextSize(16);                      // Font size
+        textOverlay.setSingleLine(false);                 // Multiline input
+        textOverlay.setPadding(20, 20, 20, 20);
+        textOverlay.setVisibility(View.GONE);             // Start hidden (drawing mode default)
+        textOverlay.setLayoutParams(fullScreenParams);
+        layout.addView(textOverlay);
+
+        // Add toggle button
+        Button toggleButton = new Button(this);
+        toggleButton.setText("Toggle to Typing");
+        toggleButton.setOnClickListener(v -> toggleMode(toggleButton));
+        FrameLayout.LayoutParams toggleParams = new FrameLayout.LayoutParams(
+                FrameLayout.LayoutParams.WRAP_CONTENT,
+                FrameLayout.LayoutParams.WRAP_CONTENT
+        );
+        toggleParams.setMargins(20, 20, 20, 0); // Top-left margin
+        layout.addView(toggleButton, toggleParams);
+
         // Set the content view
         setContentView(layout);
+    }
+
+    // Toggle between drawing and typing
+    private void toggleMode(Button toggleButton) {
+        isDrawingMode = !isDrawingMode;
+
+        if (isDrawingMode) {
+            // Enable drawing
+            textOverlay.clearFocus(); // Dismiss keyboard
+            textOverlay.setVisibility(View.GONE);
+            drawingView.setTouchEnabled(true);
+            toggleButton.setText("Toggle to Typing");
+        } else {
+            // Enable typing
+            textOverlay.requestFocus(); // Show keyboard
+            textOverlay.setVisibility(View.VISIBLE);
+            drawingView.setTouchEnabled(false);
+            toggleButton.setText("Toggle to Drawing");
+        }
     }
 
     // Custom View for Drawing
@@ -38,6 +83,7 @@ public class NoteEditorActivity extends Activity {
         private Paint paint;
         private Canvas canvas;
         private Bitmap bitmap;
+        private boolean touchEnabled = true; // Control touch interaction
         private float lastX, lastY;
 
         public DrawingView(Activity context) {
@@ -50,8 +96,8 @@ public class NoteEditorActivity extends Activity {
             paint.setStyle(Paint.Style.STROKE);
             paint.setAntiAlias(true);
 
-            // Initialize a bitmap to store the drawing, matching the view's size
-            bitmap = Bitmap.createBitmap(1080, 1920, Bitmap.Config.ARGB_8888); // Placeholder size; updated dynamically
+            // Initialize a bitmap to store the drawing
+            bitmap = Bitmap.createBitmap(1000, 1000, Bitmap.Config.ARGB_8888);
             canvas = new Canvas(bitmap); // Canvas to draw on
         }
 
@@ -74,6 +120,8 @@ public class NoteEditorActivity extends Activity {
 
         @Override
         public boolean onTouchEvent(MotionEvent event) {
+            if (!touchEnabled) return false;
+
             float x = event.getX();
             float y = event.getY();
 
@@ -86,7 +134,7 @@ public class NoteEditorActivity extends Activity {
 
                 case MotionEvent.ACTION_MOVE:
                     // Draw a line between the last position and the current position
-                    this.canvas.drawLine(lastX, lastY, x, y, paint);
+                    canvas.drawLine(lastX, lastY, x, y, paint);
                     lastX = x;
                     lastY = y;
 
@@ -94,8 +142,11 @@ public class NoteEditorActivity extends Activity {
                     invalidate();
                     break;
             }
-
             return true;
+        }
+
+        public void setTouchEnabled(boolean enabled) {
+            this.touchEnabled = enabled;
         }
     }
 }
