@@ -293,7 +293,6 @@ public class NoteEditorActivity extends Activity {
 
 
 
-
 package com.example.notesplugin;
 
 import android.app.Activity;
@@ -312,14 +311,14 @@ import android.widget.FrameLayout;
 import android.widget.LinearLayout;
 import android.widget.ScrollView;
 
-import androidx.annotation.Nullable;
+import androidx.annotation.NonNull;
 
 public class NoteEditorActivity extends Activity {
 
-    private LinearLayout pagesContainer; // Container for pages
+    private LinearLayout pagesContainer; // Container for all pages
     private ScrollView scrollView; // Main scrollable container
     private int screenHeight; // Screen height for creating full-page layouts
-    private LinearLayout activePage; // Reference to the current page being edited
+    private LinearLayout currentActivePage; // Tracks the currently active (focused) page
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -346,7 +345,7 @@ public class NoteEditorActivity extends Activity {
         // Add a button to add a sketch area
         Button addSketchButton = new Button(this);
         addSketchButton.setText("Add Sketch Area");
-        addSketchButton.setOnClickListener(v -> addSketchToCurrentPage());
+        addSketchButton.setOnClickListener(v -> addSketchToActivePage());
         addSketchButton.setLayoutParams(new FrameLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT,
                 ViewGroup.LayoutParams.WRAP_CONTENT
@@ -389,6 +388,13 @@ public class NoteEditorActivity extends Activity {
         pageEditText.setGravity(android.view.Gravity.TOP);
         pageEditText.setVerticalScrollBarEnabled(false);
 
+        // Add a listener to track the current active page
+        pageEditText.setOnFocusChangeListener((v, hasFocus) -> {
+            if (hasFocus) {
+                currentActivePage = pageLayout;
+            }
+        });
+
         // Add a listener for detecting when to add a new page
         pageEditText.addTextChangedListener(new TextWatcher() {
             @Override
@@ -415,11 +421,11 @@ public class NoteEditorActivity extends Activity {
         pagesContainer.addView(pageLayout);
 
         // Set the new page as the active page
-        activePage = pageLayout;
+        currentActivePage = pageLayout;
     }
 
-    private void addSketchToCurrentPage() {
-        if (activePage == null) return;
+    private void addSketchToActivePage() {
+        if (currentActivePage == null) return;
 
         // Create a sketch area
         SketchView sketchView = new SketchView(this);
@@ -430,7 +436,7 @@ public class NoteEditorActivity extends Activity {
         sketchView.setBackgroundColor(Color.LTGRAY);
 
         // Add the sketch area to the active page
-        activePage.addView(sketchView);
+        currentActivePage.addView(sketchView);
     }
 
     // Custom View for the Sketch Area
@@ -439,7 +445,7 @@ public class NoteEditorActivity extends Activity {
         private final Paint paint;
         private final Path path;
 
-        public SketchView(Activity context) {
+        public SketchView(@NonNull Activity context) {
             super(context);
             paint = new Paint();
             paint.setColor(Color.BLACK);
