@@ -320,6 +320,8 @@ public class NoteEditorActivity extends Activity {
     private int screenHeight; // Screen height for creating full-page layouts
     private LinearLayout currentActivePage; // Tracks the currently active (focused) page
     private EditText currentActiveEditText; // Tracks the currently focused EditText
+    private boolean isDrawingMode = false; // Tracks whether drawing mode is active
+    private View currentSketchView; // Tracks the sketch view for toggling
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -346,7 +348,7 @@ public class NoteEditorActivity extends Activity {
         // Create a toolbar with a drawing button
         LinearLayout toolbar = new LinearLayout(this);
         toolbar.setOrientation(LinearLayout.HORIZONTAL);
-        toolbar.setGravity(Gravity.CENTER);
+        toolbar.setGravity(Gravity.BOTTOM);
         toolbar.setBackgroundColor(Color.DKGRAY);
         FrameLayout.LayoutParams toolbarParams = new FrameLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT,
@@ -356,16 +358,16 @@ public class NoteEditorActivity extends Activity {
         toolbar.setLayoutParams(toolbarParams);
 
         // Add a drawing button to the toolbar
-        ImageButton drawButton = new ImageButton(this);
-        drawButton.setImageResource(android.R.drawable.ic_menu_edit); // Drawing icon
-        drawButton.setBackgroundColor(Color.LTGRAY);
-        drawButton.setLayoutParams(new LinearLayout.LayoutParams(
+        ImageButton toggleDrawButton = new ImageButton(this);
+        toggleDrawButton.setImageResource(android.R.drawable.ic_menu_edit); // Initial icon for drawing
+        toggleDrawButton.setBackgroundColor(Color.LTGRAY);
+        toggleDrawButton.setLayoutParams(new LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.WRAP_CONTENT,
                 LinearLayout.LayoutParams.MATCH_PARENT
         ));
-        drawButton.setOnClickListener(v -> addSketchToActivePage());
+        toggleDrawButton.setOnClickListener(v -> toggleDrawingMode(toggleDrawButton));
 
-        toolbar.addView(drawButton);
+        toolbar.addView(toggleDrawButton);
 
         // Create a layout to hold the toolbar and the ScrollView
         FrameLayout mainLayout = new FrameLayout(this);
@@ -393,8 +395,7 @@ public class NoteEditorActivity extends Activity {
         EditText pageEditText = new EditText(this);
         pageEditText.setLayoutParams(new LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT,
-                0,
-                1 // Weight to use remaining space for the EditText
+                LinearLayout.LayoutParams.MATCH_PARENT
         ));
         pageEditText.setBackgroundColor(Color.TRANSPARENT);
         pageEditText.setTextColor(Color.BLACK);
@@ -429,33 +430,48 @@ public class NoteEditorActivity extends Activity {
         });
     }
 
-    private void addSketchToActivePage() {
-        if (currentActivePage == null) return;
+    private void toggleDrawingMode(ImageButton toggleButton) {
+        isDrawingMode = !isDrawingMode; // Toggle mode
 
-        // Create a sketch area
-        ResizableSketchView sketchView = new ResizableSketchView(this);
-        sketchView.setLayoutParams(new LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT,
-                500 // Fixed initial height for the sketch area
-        ));
-        sketchView.setBackgroundColor(Color.TRANSPARENT);
-
-        // Add the sketch area to the active page
-        currentActivePage.addView(sketchView);
+        if (isDrawingMode) {
+            // Switch to drawing mode
+            toggleButton.setImageResource(android.R.drawable.ic_menu_view); // Change icon to text
+            if (currentActiveEditText != null) {
+                currentActiveEditText.setVisibility(View.GONE); // Hide typing area
+            }
+            if (currentSketchView == null && currentActivePage != null) {
+                // Create a new sketch area
+                ResizableSketchView sketchView = new ResizableSketchView(this);
+                sketchView.setLayoutParams(new LinearLayout.LayoutParams(
+                        LinearLayout.LayoutParams.MATCH_PARENT,
+                        LinearLayout.LayoutParams.MATCH_PARENT
+                ));
+                sketchView.setBackgroundColor(Color.TRANSPARENT);
+                currentActivePage.addView(sketchView);
+                currentSketchView = sketchView; // Track the sketch area
+            }
+        } else {
+            // Switch back to typing mode
+            toggleButton.setImageResource(android.R.drawable.ic_menu_edit); // Change icon to draw
+            if (currentSketchView != null) {
+                currentActivePage.removeView(currentSketchView); // Remove sketch area
+                currentSketchView = null;
+            }
+            if (currentActiveEditText != null) {
+                currentActiveEditText.setVisibility(View.VISIBLE); // Show typing area
+            }
+        }
     }
 
-    // Custom View for the Resizable Sketch Area
+    // Custom View for the Sketch Area
     private static class ResizableSketchView extends View {
 
         private final Paint paint;
         private final Path path;
-        private int height; // Current height of the sketch area
-        private boolean resizing = false;
 
         public ResizableSketchView(@NonNull Activity context) {
             super(context);
 
-            // Initialize the sketch area
             paint = new Paint();
             paint.setColor(Color.BLACK);
             paint.setStyle(Paint.Style.STROKE);
@@ -464,29 +480,12 @@ public class NoteEditorActivity extends Activity {
             paint.setStrokeCap(Paint.Cap.ROUND);
 
             path = new Path();
-
-            // Add red borders
-            setPadding(10, 10, 10, 10); // Internal padding for borders
         }
 
         @Override
         protected void onDraw(android.graphics.Canvas canvas) {
             super.onDraw(canvas);
-
-            // Draw the sketch
             canvas.drawPath(path, paint);
-
-            // Draw red borders
-            Paint borderPaint = new Paint();
-            borderPaint.setColor(Color.RED);
-            borderPaint.setStyle(Paint.Style.STROKE);
-            borderPaint.setStrokeWidth(5);
-
-            // Top border
-            canvas.drawRect(0, 0, getWidth(), 10, borderPaint);
-
-            // Bottom border
-            canvas.drawRect(0, getHeight() - 10, getWidth(), getHeight(), borderPaint);
         }
 
         @Override
@@ -494,31 +493,14 @@ public class NoteEditorActivity extends Activity {
             float x = event.getX();
             float y = event.getY();
 
-            if (event.getAction() == MotionEvent.ACTION_MOVE && resizing) {
-                // Resize sketch area
-                ViewGroup.LayoutParams params = getLayoutParams();
-                params.height = (int) y;
-                setLayoutParams(params);
-                requestLayout();
-                return true;
-            }
-
             switch (event.getAction()) {
                 case MotionEvent.ACTION_DOWN:
-                    if (y < 10 || y > getHeight() - 10) {
-                        resizing = true;
-                    } else {
-                        resizing = false;
-                        path.moveTo(x, y);
-                    }
+                    path.moveTo(x, y);
                     break;
                 case MotionEvent.ACTION_MOVE:
-                    if (!resizing) {
-                        path.lineTo(x, y);
-                    }
+                    path.lineTo(x, y);
                     break;
                 case MotionEvent.ACTION_UP:
-                    resizing = false;
                     break;
             }
 
