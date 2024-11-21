@@ -310,7 +310,6 @@ import android.view.ViewGroup;
 import android.widget.EditText;
 import android.widget.FrameLayout;
 import android.widget.LinearLayout;
-import android.widget.ScrollView;
 import android.widget.ToggleButton;
 
 import androidx.annotation.NonNull;
@@ -318,7 +317,7 @@ import androidx.annotation.NonNull;
 public class NoteEditorActivity extends Activity {
 
     private LinearLayout pagesContainer; // Container for all pages
-    private ScrollView scrollView; // Main scrollable container
+    private LockableScrollView scrollView; // Custom Scrollable container
     private int screenHeight; // Screen height for creating full-page layouts
     private LinearLayout currentActivePage; // Tracks the currently active (focused) page
     private EditText currentActiveEditText; // Tracks the currently focused EditText
@@ -331,8 +330,8 @@ public class NoteEditorActivity extends Activity {
         // Get screen height dynamically
         screenHeight = getResources().getDisplayMetrics().heightPixels;
 
-        // Initialize the ScrollView
-        scrollView = new ScrollView(this);
+        // Initialize the Custom ScrollView
+        scrollView = new LockableScrollView(this);
         scrollView.setLayoutParams(new ViewGroup.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT,
                 ViewGroup.LayoutParams.MATCH_PARENT
@@ -479,6 +478,30 @@ public class NoteEditorActivity extends Activity {
 
         // Add the sketch area to the active page
         currentActivePage.addView(sketchView);
+    }
+
+    // Custom ScrollView to enable or disable scrolling
+    private static class LockableScrollView extends ScrollView {
+
+        private boolean isScrollable = true;
+
+        public LockableScrollView(Activity context) {
+            super(context);
+        }
+
+        public void setScrollingEnabled(boolean enabled) {
+            isScrollable = enabled;
+        }
+
+        @Override
+        public boolean onTouchEvent(MotionEvent ev) {
+            return isScrollable && super.onTouchEvent(ev);
+        }
+
+        @Override
+        public boolean onInterceptTouchEvent(MotionEvent ev) {
+            return isScrollable && super.onInterceptTouchEvent(ev);
+        }
     }
 
     // Custom View for the Sketch Area
