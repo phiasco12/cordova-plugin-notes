@@ -310,11 +310,14 @@ import android.widget.ScrollView;
 import android.graphics.drawable.GradientDrawable;
 import android.view.View;
 
+import java.util.ArrayList;
+import java.util.List;
+
 public class NoteEditorActivity extends Activity {
 
     private LinearLayout pagesContainer; // Container for all pages
     private int screenHeight; // Screen height for 100% height calculation
-    private EditText currentEditText; // Reference to the current active EditText
+    private List<EditText> pageEditTexts = new ArrayList<>(); // List of all EditTexts (pages)
     private ScrollView scrollView; // ScrollView to manage scrolling
 
     @Override
@@ -338,11 +341,6 @@ public class NoteEditorActivity extends Activity {
 
         // Add the first page
         addNewPage();
-
-        // Ensure padding/margin adjustments for proper scrolling
-        scrollView.setPadding(0, 0, 0, 0); // Optional: adjust padding for better spacing
-        scrollView.setClipToPadding(false); // Prevent clipping at the edges
-        scrollView.setFillViewport(true); // Ensure the first page fills the viewport
 
         // Set the ScrollView as the main content
         setContentView(scrollView);
@@ -391,37 +389,18 @@ public class NoteEditorActivity extends Activity {
         pageEditText.setVerticalScrollBarEnabled(false);    // Disable EditText scrolling
         pageEditText.setGravity(android.view.Gravity.TOP);  // Start typing from the top
 
-        // Set this page's EditText as the currentEditText
-        currentEditText = pageEditText;
-
-        // Add a listener to detect when a new page should be added
+        // Add a TextWatcher to monitor text changes
         pageEditText.addTextChangedListener(new TextWatcher() {
             @Override
             public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
 
             @Override
             public void onTextChanged(CharSequence s, int start, int before, int count) {
-                // Check if text height exceeds the current page height
-                int totalLinesHeight = pageEditText.getLineHeight() * pageEditText.getLineCount();
-                if (totalLinesHeight >= screenHeight - 80) { // Adjust for padding/margin
-                    pageEditText.removeTextChangedListener(this); // Remove listener to avoid recursion
-                    addNewPage(); // Add a new page
-
-                    // Automatically move focus to the new page's EditText
-                    currentEditText.requestFocus();
-                }
+                redistributeText();
             }
 
             @Override
             public void afterTextChanged(Editable s) {}
-        });
-
-        // Focus listener to adjust scrolling
-        pageEditText.setOnFocusChangeListener((v, hasFocus) -> {
-            if (hasFocus) {
-                // Scroll to the EditText when it gains focus
-                scrollView.post(() -> scrollView.smoothScrollTo(0, pageEditText.getTop()));
-            }
         });
 
         // Add the EditText to the page
@@ -429,5 +408,54 @@ public class NoteEditorActivity extends Activity {
 
         // Add the page to the pages container
         pagesContainer.addView(pageLayout);
+
+        // Add the EditText to the list of pages
+        pageEditTexts.add(pageEditText);
+    }
+
+    // Redistribute text between pages
+    private void redistributeText() {
+        for (int i = 0; i < pageEditTexts.size(); i++) {
+            EditText currentPage = pageEditTexts.get(i);
+
+            // Check if the content overflows the current page
+            while (isOverflowing(currentPage)) {
+                String overflowingText = currentPage.getText().toString();
+                int charactersToFit = calculateCharactersToFit(currentPage);
+
+                // Split the text into two parts
+                String textForCurrentPage = overflowingText.substring(0, charactersToFit);
+                String textForNextPage = overflowingText.substring(charactersToFit);
+
+                // Set the current page's text and remove overflow
+                currentPage.setText(textForCurrentPage);
+                currentPage.setSelection(textForCurrentPage.length()); // Keep cursor at the end
+
+                // Add a new page if necessary
+                if (i + 1 >= pageEditTexts.size()) {
+                    addNewPage();
+                }
+
+                // Move the overflow text to the next page
+                EditText nextPage = pageEditTexts.get(i + 1);
+                nextPage.setText(textForNextPage + nextPage.getText().toString());
+            }
+        }
+    }
+
+    // Check if the text in the EditText overflows the page height
+    private boolean isOverflowing(EditText pageEditText) {
+        int totalLinesHeight = pageEditText.getLineHeight() * pageEditText.getLineCount();
+        return totalLinesHeight > screenHeight - 80; // Adjust for padding/margin
+    }
+
+    // Calculate the maximum number of characters that fit in the current page
+    private int calculateCharactersToFit(EditText pageEditText) {
+        int lineHeight = pageEditText.getLineHeight();
+        int linesThatFit = (screenHeight - 80) / lineHeight; // Adjust for padding/margin
+        int totalCharacters = pageEditText.getText().length();
+        int charactersPerLine = Math.max(1, totalCharacters / pageEditText.getLineCount());
+
+        return linesThatFit * charactersPerLine; // Estimate characters that fit in the page
     }
 }
