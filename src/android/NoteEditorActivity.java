@@ -320,8 +320,8 @@ public class NoteEditorActivity extends Activity {
     private int screenHeight; // Screen height for creating full-page layouts
     private LinearLayout currentActivePage; // Tracks the currently active (focused) page
     private EditText currentActiveEditText; // Tracks the currently focused EditText
+    private ResizableSketchView currentSketchView; // Tracks the sketch view for the current page
     private boolean isDrawingMode = false; // Tracks whether drawing mode is active
-    private View currentSketchView; // Tracks the sketch view for toggling
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -395,7 +395,8 @@ public class NoteEditorActivity extends Activity {
         EditText pageEditText = new EditText(this);
         pageEditText.setLayoutParams(new LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT,
-                LinearLayout.LayoutParams.MATCH_PARENT
+                0,
+                1 // Weight to use remaining space for the EditText
         ));
         pageEditText.setBackgroundColor(Color.TRANSPARENT);
         pageEditText.setTextColor(Color.BLACK);
@@ -413,15 +414,25 @@ public class NoteEditorActivity extends Activity {
             }
         });
 
-        // Add the EditText to the page
+        // Create a sketch area
+        ResizableSketchView sketchView = new ResizableSketchView(this);
+        sketchView.setLayoutParams(new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                500 // Fixed initial height for the sketch area
+        ));
+        sketchView.setBackgroundColor(Color.TRANSPARENT);
+
+        // Add the EditText and the sketch area to the page
         pageLayout.addView(pageEditText);
+        pageLayout.addView(sketchView);
 
         // Add the new page to the container
         pagesContainer.addView(pageLayout);
 
-        // Set the new page as the active page and focus its EditText
+        // Set the new page as the active page
         currentActivePage = pageLayout;
         currentActiveEditText = pageEditText;
+        currentSketchView = sketchView;
 
         // Scroll to the new page and request focus
         scrollView.post(() -> {
@@ -437,28 +448,21 @@ public class NoteEditorActivity extends Activity {
             // Switch to drawing mode
             toggleButton.setImageResource(android.R.drawable.ic_menu_view); // Change icon to text
             if (currentActiveEditText != null) {
-                currentActiveEditText.setVisibility(View.GONE); // Hide typing area
+                currentActiveEditText.clearFocus(); // Clear focus from the EditText
+                currentActiveEditText.setEnabled(false); // Disable typing
             }
-            if (currentSketchView == null && currentActivePage != null) {
-                // Create a new sketch area
-                ResizableSketchView sketchView = new ResizableSketchView(this);
-                sketchView.setLayoutParams(new LinearLayout.LayoutParams(
-                        LinearLayout.LayoutParams.MATCH_PARENT,
-                        LinearLayout.LayoutParams.MATCH_PARENT
-                ));
-                sketchView.setBackgroundColor(Color.TRANSPARENT);
-                currentActivePage.addView(sketchView);
-                currentSketchView = sketchView; // Track the sketch area
+            if (currentSketchView != null) {
+                currentSketchView.setEnabled(true); // Enable drawing
             }
         } else {
             // Switch back to typing mode
             toggleButton.setImageResource(android.R.drawable.ic_menu_edit); // Change icon to draw
-            if (currentSketchView != null) {
-                currentActivePage.removeView(currentSketchView); // Remove sketch area
-                currentSketchView = null;
-            }
             if (currentActiveEditText != null) {
-                currentActiveEditText.setVisibility(View.VISIBLE); // Show typing area
+                currentActiveEditText.setEnabled(true); // Enable typing
+                currentActiveEditText.requestFocus(); // Restore focus to EditText
+            }
+            if (currentSketchView != null) {
+                currentSketchView.setEnabled(false); // Disable drawing
             }
         }
     }
@@ -490,6 +494,8 @@ public class NoteEditorActivity extends Activity {
 
         @Override
         public boolean onTouchEvent(MotionEvent event) {
+            if (!isEnabled()) return false; // Ignore touch events when disabled
+
             float x = event.getX();
             float y = event.getY();
 
