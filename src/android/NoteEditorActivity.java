@@ -315,14 +315,17 @@ public class NoteEditorActivity extends Activity {
             canvas = new Canvas(bitmap); // Canvas to draw on
         }
 
-        @Override
-        protected void onSizeChanged(int w, int h, int oldw, int oldh) {
-            super.onSizeChanged(w, h, oldw, oldh);
+@Override
+protected void onSizeChanged(int w, int h, int oldw, int oldh) {
+    super.onSizeChanged(w, h, oldw, oldh);
 
-            // Resize the bitmap to match the view size
-            bitmap = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888);
-            canvas = new Canvas(bitmap);
-        }
+    // Check that width and height are greater than 0
+    if (w > 0 && h > 0) {
+        bitmap = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888);
+        canvas = new Canvas(bitmap);
+    }
+}
+
 
         @Override
         protected void onDraw(Canvas canvas) {
