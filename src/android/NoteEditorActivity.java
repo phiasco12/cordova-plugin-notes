@@ -174,6 +174,7 @@ public class NoteEditorActivity extends Activity {
 
     private LinearLayout pagesContainer; // Container for all pages
     private int screenHeight; // Screen height for 100% height calculation
+    private EditText currentEditText; // Reference to the current active EditText
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -237,6 +238,9 @@ public class NoteEditorActivity extends Activity {
         pageEditText.setVerticalScrollBarEnabled(false);    // Disable EditText scrolling
         pageEditText.setGravity(android.view.Gravity.TOP);  // Start typing from the top
 
+        // Set this page's EditText as the currentEditText
+        currentEditText = pageEditText;
+
         // Add a listener to detect when a new page should be added
         pageEditText.addTextChangedListener(new TextWatcher() {
             @Override
@@ -249,6 +253,9 @@ public class NoteEditorActivity extends Activity {
                 if (totalLinesHeight >= screenHeight) {
                     pageEditText.removeTextChangedListener(this); // Remove listener to avoid recursion
                     addNewPage(); // Add a new page
+
+                    // Automatically move focus to the new page's EditText
+                    currentEditText.requestFocus();
                 }
             }
 
