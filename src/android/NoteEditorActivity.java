@@ -298,6 +298,7 @@ package com.example.notesplugin;
 
 import android.app.Activity;
 import android.graphics.Color;
+import android.graphics.drawable.GradientDrawable;
 import android.os.Bundle;
 import android.text.Editable;
 import android.text.TextWatcher;
@@ -344,11 +345,20 @@ public class NoteEditorActivity extends Activity {
         // Create a container for a single page
         LinearLayout pageLayout = new LinearLayout(this);
         pageLayout.setOrientation(LinearLayout.VERTICAL);
-        pageLayout.setLayoutParams(new LinearLayout.LayoutParams(
+        LinearLayout.LayoutParams pageLayoutParams = new LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT,
-                screenHeight
-        ));
-        pageLayout.setBackgroundColor(Color.WHITE);
+                screenHeight - 100 // Slightly smaller than the screen to leave space for margin
+        );
+        pageLayoutParams.setMargins(20, 20, 20, 20); // Add margins around each page
+        pageLayout.setLayoutParams(pageLayoutParams);
+
+        // Set background with border radius and shadow
+        GradientDrawable pageBackground = new GradientDrawable();
+        pageBackground.setColor(Color.WHITE); // Background color
+        pageBackground.setCornerRadius(20); // Rounded corners
+        pageBackground.setStroke(4, Color.LTGRAY); // Border color and thickness
+        pageLayout.setBackground(pageBackground);
+        pageLayout.setPadding(30, 30, 30, 30); // Add padding inside the page
 
         // Create an EditText for writing
         EditText pageEditText = new EditText(this);
@@ -356,10 +366,10 @@ public class NoteEditorActivity extends Activity {
                 LinearLayout.LayoutParams.MATCH_PARENT,
                 LinearLayout.LayoutParams.MATCH_PARENT
         ));
-        pageEditText.setBackgroundColor(Color.TRANSPARENT);
+        pageEditText.setBackgroundColor(Color.TRANSPARENT); // Transparent background to match the container
         pageEditText.setTextColor(Color.BLACK);
         pageEditText.setTextSize(16);
-        pageEditText.setPadding(20, 20, 20, 20);
+        pageEditText.setPadding(10, 10, 10, 10); // Internal padding for text
         pageEditText.setSingleLine(false);
         pageEditText.setGravity(android.view.Gravity.TOP);
         pageEditText.setVerticalScrollBarEnabled(false);
@@ -373,7 +383,7 @@ public class NoteEditorActivity extends Activity {
             public void onTextChanged(CharSequence s, int start, int before, int count) {
                 // Calculate text height dynamically
                 int textHeight = pageEditText.getLineHeight() * pageEditText.getLineCount();
-                if (textHeight >= screenHeight - 100) {
+                if (textHeight >= screenHeight - 200) { // Adjust for padding and margin
                     pageEditText.removeTextChangedListener(this); // Prevent recursion
                     createNewPage(); // Add a new page
                 }
