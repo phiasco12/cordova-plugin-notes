@@ -191,9 +191,6 @@ public class NoteEditorActivity extends Activity {
                 FrameLayout.LayoutParams.MATCH_PARENT
         ));
 
-        // Add padding to the top of the ScrollView to ensure the first page is fully scrollable
-        scrollView.setPadding(0, 0, 0, 0); // Add any padding here if needed
-
         // LinearLayout to hold pages vertically
         pagesContainer = new LinearLayout(this);
         pagesContainer.setOrientation(LinearLayout.VERTICAL);
@@ -252,22 +249,14 @@ public class NoteEditorActivity extends Activity {
 
             @Override
             public void onTextChanged(CharSequence s, int start, int before, int count) {
-                // Check if text height exceeds the current page height
-                int totalLinesHeight = pageEditText.getLineHeight() * pageEditText.getLineCount();
-                if (totalLinesHeight >= screenHeight) {
-                    pageEditText.removeTextChangedListener(this); // Remove listener to avoid recursion
-                    addNewPage(); // Add a new page
-
-                    // Automatically move focus to the new page's EditText
-                    currentEditText.requestFocus();
-                }
+                checkPageOverflow(pageEditText);
             }
 
             @Override
             public void afterTextChanged(Editable s) {}
         });
 
-        // Focus listener to adjust scrolling
+        // Handle pasting long text
         pageEditText.setOnFocusChangeListener((v, hasFocus) -> {
             if (hasFocus) {
                 // Scroll to the EditText when it gains focus
@@ -280,5 +269,39 @@ public class NoteEditorActivity extends Activity {
 
         // Add the page to the pages container
         pagesContainer.addView(pageLayout);
+    }
+
+    // Check if the text in the current EditText overflows the page height
+    private void checkPageOverflow(EditText pageEditText) {
+        int totalLinesHeight = pageEditText.getLineHeight() * pageEditText.getLineCount();
+
+        // If the text height exceeds the screen height, split the text into pages
+        if (totalLinesHeight > screenHeight) {
+            String overflowingText = pageEditText.getText().toString();
+            int charactersToFit = calculateCharactersToFit(pageEditText);
+
+            // Split the text into two parts
+            String textForCurrentPage = overflowingText.substring(0, charactersToFit);
+            String textForNextPage = overflowingText.substring(charactersToFit);
+
+            // Set the current page's text and remove overflow
+            pageEditText.setText(textForCurrentPage);
+            pageEditText.setSelection(textForCurrentPage.length()); // Keep cursor at the end
+
+            // Add a new page and set its text to the overflow
+            addNewPage();
+            currentEditText.setText(textForNextPage);
+            currentEditText.setSelection(0); // Move cursor to the start of the new page
+        }
+    }
+
+    // Calculate the maximum number of characters that fit in the current page
+    private int calculateCharactersToFit(EditText pageEditText) {
+        int lineHeight = pageEditText.getLineHeight();
+        int linesThatFit = screenHeight / lineHeight;
+        int totalCharacters = pageEditText.getText().length();
+        int charactersPerLine = totalCharacters / pageEditText.getLineCount();
+
+        return linesThatFit * charactersPerLine; // Estimate characters that fit in the page
     }
 }
