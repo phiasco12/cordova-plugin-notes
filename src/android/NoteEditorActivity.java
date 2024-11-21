@@ -185,21 +185,14 @@ public class NoteEditorActivity extends Activity {
         screenHeight = getResources().getDisplayMetrics().heightPixels;
 
         // Main ScrollView container
-        scrollView = new ScrollView(this) {
-            @Override
-            protected void onScrollChanged(int l, int t, int oldl, int oldt) {
-                super.onScrollChanged(l, t, oldl, oldt);
-                // Ensure we can scroll all the way to the top
-                if (t == 0) {
-                    scrollView.scrollTo(0, 0); // Reset to top if scrolled too far
-                }
-            }
-        };
-
+        scrollView = new ScrollView(this);
         scrollView.setLayoutParams(new FrameLayout.LayoutParams(
                 FrameLayout.LayoutParams.MATCH_PARENT,
                 FrameLayout.LayoutParams.MATCH_PARENT
         ));
+
+        // Add padding to the top of the ScrollView to ensure the first page is fully scrollable
+        scrollView.setPadding(0, 0, 0, 0); // Add any padding here if needed
 
         // LinearLayout to hold pages vertically
         pagesContainer = new LinearLayout(this);
