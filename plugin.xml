@@ -4,8 +4,8 @@
         <clobbers target="Notes" />
     </js-module>
 
-<!--<platform name="android">
-    <config-file target="res/xml/config.xml" parent="/*">
+<platform name="android">
+    <!--<config-file target="res/xml/config.xml" parent="/*">
         <feature name="NotesPlugin">
             <param name="android-package" value="com.example.notesplugin.NotesPlugin" />
         </feature>
