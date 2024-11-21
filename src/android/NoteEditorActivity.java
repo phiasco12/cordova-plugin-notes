@@ -40,7 +40,8 @@ public class NoteEditorActivity extends Activity {
         textOverlay.setTextSize(16);                      // Font size
         textOverlay.setSingleLine(false);                 // Multiline input
         textOverlay.setPadding(20, 20, 20, 20);
-        textOverlay.setVisibility(View.GONE);             // Start hidden (drawing mode default)
+        textOverlay.setFocusable(false);                  // Disable typing initially
+        textOverlay.setFocusableInTouchMode(false);
         textOverlay.setLayoutParams(fullScreenParams);
         layout.addView(textOverlay);
 
@@ -66,13 +67,15 @@ public class NoteEditorActivity extends Activity {
         if (isDrawingMode) {
             // Enable drawing
             textOverlay.clearFocus(); // Dismiss keyboard
-            textOverlay.setVisibility(View.GONE);
+            textOverlay.setFocusable(false);
+            textOverlay.setFocusableInTouchMode(false);
             drawingView.setTouchEnabled(true);
             toggleButton.setText("Toggle to Typing");
         } else {
             // Enable typing
+            textOverlay.setFocusable(true);
+            textOverlay.setFocusableInTouchMode(true);
             textOverlay.requestFocus(); // Show keyboard
-            textOverlay.setVisibility(View.VISIBLE);
             drawingView.setTouchEnabled(false);
             toggleButton.setText("Toggle to Drawing");
         }
@@ -142,6 +145,7 @@ public class NoteEditorActivity extends Activity {
                     invalidate();
                     break;
             }
+
             return true;
         }
 
