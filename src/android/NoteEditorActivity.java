@@ -309,15 +309,15 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.EditText;
 import android.widget.FrameLayout;
+import android.widget.ImageButton;
 import android.widget.LinearLayout;
-import android.widget.ToggleButton;
 
 import androidx.annotation.NonNull;
 
 public class NoteEditorActivity extends Activity {
 
     private LinearLayout pagesContainer; // Container for all pages
-    private LockableScrollView scrollView; // Custom Scrollable container
+    private ScrollView scrollView; // Main scrollable container
     private int screenHeight; // Screen height for creating full-page layouts
     private LinearLayout currentActivePage; // Tracks the currently active (focused) page
     private EditText currentActiveEditText; // Tracks the currently focused EditText
@@ -330,8 +330,8 @@ public class NoteEditorActivity extends Activity {
         // Get screen height dynamically
         screenHeight = getResources().getDisplayMetrics().heightPixels;
 
-        // Initialize the Custom ScrollView
-        scrollView = new LockableScrollView(this);
+        // Initialize the ScrollView
+        scrollView = new ScrollView(this);
         scrollView.setLayoutParams(new ViewGroup.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT,
                 ViewGroup.LayoutParams.MATCH_PARENT
@@ -345,7 +345,7 @@ public class NoteEditorActivity extends Activity {
         // Add the first page
         createNewPage();
 
-        // Create a toolbar with a toggle button
+        // Add a toolbar with a toggle button
         LinearLayout toolbar = new LinearLayout(this);
         toolbar.setOrientation(LinearLayout.HORIZONTAL);
         toolbar.setGravity(Gravity.BOTTOM);
@@ -355,11 +355,9 @@ public class NoteEditorActivity extends Activity {
                 150 // Fixed height for the toolbar
         ));
 
-        // Add a toggle button for switching modes
-        ToggleButton toggleDrawButton = new ToggleButton(this);
-        toggleDrawButton.setTextOff("✍ Draw");
-        toggleDrawButton.setTextOn("✏ Type");
-        toggleDrawButton.setChecked(false);
+        // Add a button to toggle drawing mode
+        ImageButton toggleDrawButton = new ImageButton(this);
+        toggleDrawButton.setImageResource(android.R.drawable.ic_menu_edit); // Initial icon for drawing
         toggleDrawButton.setBackgroundColor(Color.LTGRAY);
         toggleDrawButton.setLayoutParams(new LinearLayout.LayoutParams(
                 300, // Fixed width
@@ -451,17 +449,19 @@ public class NoteEditorActivity extends Activity {
         });
     }
 
-    private void toggleDrawingMode(ToggleButton toggleButton) {
-        isDrawingMode = toggleButton.isChecked();
+    private void toggleDrawingMode(ImageButton toggleButton) {
+        isDrawingMode = !isDrawingMode; // Toggle mode
 
         if (isDrawingMode) {
+            // Switch to drawing mode
+            toggleButton.setImageResource(android.R.drawable.ic_menu_edit); // Set drawing icon
             if (currentActiveEditText != null) {
                 currentActiveEditText.clearFocus(); // Clear focus from the EditText
             }
-            scrollView.setScrollingEnabled(false); // Disable scrolling for smooth drawing
-            addSketchToActivePage(); // Add a sketch area to the active page
+            addSketchToActivePage(); // Add a sketch area to the active page if not already present
         } else {
-            scrollView.setScrollingEnabled(true); // Enable scrolling when back to typing mode
+            // Switch back to typing mode
+            toggleButton.setImageResource(android.R.drawable.ic_menu_view); // Set text icon
         }
     }
 
@@ -478,30 +478,6 @@ public class NoteEditorActivity extends Activity {
 
         // Add the sketch area to the active page
         currentActivePage.addView(sketchView);
-    }
-
-    // Custom ScrollView to enable or disable scrolling
-    private static class LockableScrollView extends ScrollView {
-
-        private boolean isScrollable = true;
-
-        public LockableScrollView(Activity context) {
-            super(context);
-        }
-
-        public void setScrollingEnabled(boolean enabled) {
-            isScrollable = enabled;
-        }
-
-        @Override
-        public boolean onTouchEvent(MotionEvent ev) {
-            return isScrollable && super.onTouchEvent(ev);
-        }
-
-        @Override
-        public boolean onInterceptTouchEvent(MotionEvent ev) {
-            return isScrollable && super.onInterceptTouchEvent(ev);
-        }
     }
 
     // Custom View for the Sketch Area
