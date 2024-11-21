@@ -434,11 +434,8 @@ public class NoteEditorActivity extends Activity {
         currentActiveEditText = pageEditText;
         currentSketchView = sketchView;
 
-        // Scroll to the new page and request focus
-        scrollView.post(() -> {
-            scrollView.smoothScrollTo(0, pageLayout.getTop());
-            pageEditText.requestFocus();
-        });
+        // Scroll to the new page
+        scrollView.post(() -> scrollView.smoothScrollTo(0, pageLayout.getTop()));
     }
 
     private void toggleDrawingMode(ImageButton toggleButton) {
@@ -449,7 +446,6 @@ public class NoteEditorActivity extends Activity {
             toggleButton.setImageResource(android.R.drawable.ic_menu_view); // Change icon to text
             if (currentActiveEditText != null) {
                 currentActiveEditText.clearFocus(); // Clear focus from the EditText
-                currentActiveEditText.setEnabled(false); // Disable typing
             }
             if (currentSketchView != null) {
                 currentSketchView.setEnabled(true); // Enable drawing
@@ -458,7 +454,6 @@ public class NoteEditorActivity extends Activity {
             // Switch back to typing mode
             toggleButton.setImageResource(android.R.drawable.ic_menu_edit); // Change icon to draw
             if (currentActiveEditText != null) {
-                currentActiveEditText.setEnabled(true); // Enable typing
                 currentActiveEditText.requestFocus(); // Restore focus to EditText
             }
             if (currentSketchView != null) {
