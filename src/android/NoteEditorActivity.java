@@ -168,6 +168,7 @@ import android.widget.EditText;
 import android.widget.FrameLayout;
 import android.widget.LinearLayout;
 import android.widget.ScrollView;
+import android.view.View;
 
 public class NoteEditorActivity extends Activity {
 
@@ -202,6 +203,18 @@ public class NoteEditorActivity extends Activity {
 
     // Add a new page
     private void addNewPage() {
+        // Create a separator for visual distinction
+        if (pagesContainer.getChildCount() > 0) {
+            View separator = new View(this);
+            LinearLayout.LayoutParams separatorParams = new LinearLayout.LayoutParams(
+                    ViewGroup.LayoutParams.MATCH_PARENT,
+                    4 // Height of the separator (e.g., 4px)
+            );
+            separator.setBackgroundColor(Color.LTGRAY); // Light gray for the separator
+            separator.setLayoutParams(separatorParams);
+            pagesContainer.addView(separator);
+        }
+
         // Create a page container with 100% screen height
         FrameLayout pageLayout = new FrameLayout(this);
         pageLayout.setLayoutParams(new LinearLayout.LayoutParams(
