@@ -185,7 +185,17 @@ public class NoteEditorActivity extends Activity {
         screenHeight = getResources().getDisplayMetrics().heightPixels;
 
         // Main ScrollView container
-        scrollView = new ScrollView(this);
+        scrollView = new ScrollView(this) {
+            @Override
+            protected void onScrollChanged(int l, int t, int oldl, int oldt) {
+                super.onScrollChanged(l, t, oldl, oldt);
+                // Ensure we can scroll all the way to the top
+                if (t == 0) {
+                    scrollView.scrollTo(0, 0); // Reset to top if scrolled too far
+                }
+            }
+        };
+
         scrollView.setLayoutParams(new FrameLayout.LayoutParams(
                 FrameLayout.LayoutParams.MATCH_PARENT,
                 FrameLayout.LayoutParams.MATCH_PARENT
@@ -249,16 +259,25 @@ public class NoteEditorActivity extends Activity {
 
             @Override
             public void onTextChanged(CharSequence s, int start, int before, int count) {
-                checkPageOverflow(pageEditText);
+                // Check if text height exceeds the current page height
+                int totalLinesHeight = pageEditText.getLineHeight() * pageEditText.getLineCount();
+                if (totalLinesHeight >= screenHeight) {
+                    pageEditText.removeTextChangedListener(this); // Remove listener to avoid recursion
+                    addNewPage(); // Add a new page
+
+                    // Automatically move focus to the new page's EditText
+                    currentEditText.requestFocus();
+                }
             }
 
             @Override
             public void afterTextChanged(Editable s) {}
         });
 
-        // Handle focus changes for scrolling
+        // Focus listener to adjust scrolling
         pageEditText.setOnFocusChangeListener((v, hasFocus) -> {
             if (hasFocus) {
+                // Scroll to the EditText when it gains focus
                 scrollView.post(() -> scrollView.smoothScrollTo(0, pageEditText.getTop()));
             }
         });
@@ -268,39 +287,5 @@ public class NoteEditorActivity extends Activity {
 
         // Add the page to the pages container
         pagesContainer.addView(pageLayout);
-    }
-
-    // Check if the text in the current EditText overflows the page height
-    private void checkPageOverflow(EditText pageEditText) {
-        int totalLinesHeight = pageEditText.getLineHeight() * pageEditText.getLineCount();
-
-        // If the text height exceeds the screen height, split the text into pages
-        if (totalLinesHeight > screenHeight) {
-            String overflowingText = pageEditText.getText().toString();
-            int charactersToFit = calculateCharactersToFit(pageEditText);
-
-            // Split the text into two parts
-            String textForCurrentPage = overflowingText.substring(0, charactersToFit);
-            String textForNextPage = overflowingText.substring(charactersToFit);
-
-            // Set the current page's text and remove overflow
-            pageEditText.setText(textForCurrentPage);
-            pageEditText.setSelection(textForCurrentPage.length()); // Keep cursor at the end
-
-            // Add a new page and set its text to the overflow
-            addNewPage();
-            currentEditText.setText(textForNextPage);
-            currentEditText.setSelection(0); // Move cursor to the start of the new page
-        }
-    }
-
-    // Calculate the maximum number of characters that fit in the current page
-    private int calculateCharactersToFit(EditText pageEditText) {
-        int lineHeight = pageEditText.getLineHeight();
-        int linesThatFit = screenHeight / lineHeight;
-        int totalCharacters = pageEditText.getText().length();
-        int charactersPerLine = Math.max(1, totalCharacters / pageEditText.getLineCount());
-
-        return linesThatFit * charactersPerLine; // Estimate characters that fit in the page
     }
 }
