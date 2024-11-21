@@ -164,37 +164,48 @@ import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Paint;
 import android.os.Bundle;
-import android.text.Editable;
 import android.text.TextWatcher;
+import android.text.Editable;
 import android.view.MotionEvent;
 import android.view.View;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.FrameLayout;
+import android.widget.LinearLayout;
 import android.widget.ScrollView;
 
 import java.util.ArrayList;
-import java.util.List;
 
 public class NoteEditorActivity extends Activity {
 
-    private List<Page> pages = new ArrayList<>(); // List of pages
-    private FrameLayout currentPageLayout;       // Current page container
-    private ScrollView scrollView;               // Scrollable container for all pages
-    private boolean isDrawingMode = true;        // Start in drawing mode
+    private LinearLayout pagesContainer; // Container for all pages
+    private boolean isDrawingMode = true; // Start in drawing mode
+    private ArrayList<Page> pages; // List of pages
+    private Page currentPage; // Currently active page
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
-        // Create a scrollable container for pages
-        scrollView = new ScrollView(this);
+        // Initialize the main layout
         FrameLayout mainLayout = new FrameLayout(this);
-        scrollView.addView(mainLayout);
-        setContentView(scrollView);
 
-        // Add the first page
-        addNewPage(mainLayout);
+        // ScrollView to hold multiple pages
+        ScrollView scrollView = new ScrollView(this);
+        scrollView.setLayoutParams(new FrameLayout.LayoutParams(
+                FrameLayout.LayoutParams.MATCH_PARENT,
+                FrameLayout.LayoutParams.MATCH_PARENT
+        ));
+        mainLayout.addView(scrollView);
+
+        // Pages container
+        pagesContainer = new LinearLayout(this);
+        pagesContainer.setOrientation(LinearLayout.VERTICAL);
+        scrollView.addView(pagesContainer);
+
+        // Initialize pages list and add the first page
+        pages = new ArrayList<>();
+        addNewPage();
 
         // Add toggle button
         Button toggleButton = new Button(this);
@@ -205,90 +216,95 @@ public class NoteEditorActivity extends Activity {
                 FrameLayout.LayoutParams.WRAP_CONTENT
         );
         toggleParams.setMargins(20, 20, 20, 0); // Top-left margin
-        currentPageLayout.addView(toggleButton, toggleParams);
+        mainLayout.addView(toggleButton, toggleParams);
+
+        // Set the main layout as the content view
+        setContentView(mainLayout);
     }
 
-    // Add a new page to the layout
-    private void addNewPage(FrameLayout mainLayout) {
-        FrameLayout pageLayout = new FrameLayout(this);
-        FrameLayout.LayoutParams pageParams = new FrameLayout.LayoutParams(
-                FrameLayout.LayoutParams.MATCH_PARENT,
-                FrameLayout.LayoutParams.MATCH_PARENT
-        );
-        pageLayout.setLayoutParams(pageParams);
-        mainLayout.addView(pageLayout);
+    // Add a new page with its own EditText and DrawingView
+    private void addNewPage() {
+        Page page = new Page(this);
+        pages.add(page);
+        pagesContainer.addView(page.pageLayout);
 
-        // Create a new page object
-        Page newPage = new Page(this);
-        pages.add(newPage);
-        currentPageLayout = pageLayout;
-
-        // Add DrawingView and EditText to the new page
-        pageLayout.addView(newPage.drawingView);
-        pageLayout.addView(newPage.textOverlay);
-
-        // Watch for text input to detect when the bottom is reached
-        newPage.textOverlay.addTextChangedListener(new TextWatcher() {
-            @Override
-            public void beforeTextChanged(CharSequence s, int start, int count, int after) {
-            }
-
-            @Override
-            public void onTextChanged(CharSequence s, int start, int before, int count) {
-                if (newPage.textOverlay.getHeight() - newPage.textOverlay.getScrollY()
-                        <= newPage.textOverlay.getLineHeight() * newPage.textOverlay.getLineCount()) {
-                    // Text has reached the bottom, create a new page
-                    addNewPage(mainLayout);
-                }
-            }
-
-            @Override
-            public void afterTextChanged(Editable s) {
-            }
-        });
+        // Set this as the current page
+        currentPage = page;
     }
 
     // Toggle between drawing and typing
     private void toggleMode(Button toggleButton) {
         isDrawingMode = !isDrawingMode;
-        for (Page page : pages) {
-            if (isDrawingMode) {
-                // Enable drawing
-                page.textOverlay.setVisibility(View.GONE);
-                page.drawingView.setTouchEnabled(true);
-                toggleButton.setText("Toggle to Typing");
-            } else {
-                // Enable typing
-                page.textOverlay.setVisibility(View.VISIBLE);
-                page.drawingView.setTouchEnabled(false);
-                toggleButton.setText("Toggle to Drawing");
-            }
+
+        if (isDrawingMode) {
+            // Enable drawing
+            currentPage.textOverlay.clearFocus(); // Dismiss keyboard
+            currentPage.textOverlay.setFocusable(false);
+            currentPage.textOverlay.setFocusableInTouchMode(false);
+            currentPage.drawingView.setTouchEnabled(true);
+            toggleButton.setText("Toggle to Typing");
+        } else {
+            // Enable typing
+            currentPage.textOverlay.setFocusable(true);
+            currentPage.textOverlay.setFocusableInTouchMode(true);
+            currentPage.textOverlay.requestFocus(); // Show keyboard
+            currentPage.drawingView.setTouchEnabled(false);
+            toggleButton.setText("Toggle to Drawing");
         }
     }
 
-    // Page class to encapsulate DrawingView and EditText
+    // Page class representing a single page
     private static class Page {
-        DrawingView drawingView;
-        EditText textOverlay;
+        FrameLayout pageLayout; // Layout for the page
+        DrawingView drawingView; // Drawing view for this page
+        EditText textOverlay; // Text overlay for this page
 
         public Page(Activity context) {
-            // Initialize DrawingView
+            pageLayout = new FrameLayout(context);
+            pageLayout.setLayoutParams(new FrameLayout.LayoutParams(
+                    FrameLayout.LayoutParams.MATCH_PARENT,
+                    FrameLayout.LayoutParams.MATCH_PARENT
+            ));
+
+            // DrawingView
             drawingView = new DrawingView(context);
-            FrameLayout.LayoutParams fullScreenParams = new FrameLayout.LayoutParams(
+            FrameLayout.LayoutParams drawingParams = new FrameLayout.LayoutParams(
                     FrameLayout.LayoutParams.MATCH_PARENT,
                     FrameLayout.LayoutParams.MATCH_PARENT
             );
-            drawingView.setLayoutParams(fullScreenParams);
+            pageLayout.addView(drawingView, drawingParams);
 
-            // Initialize EditText
+            // TextOverlay
             textOverlay = new EditText(context);
-            textOverlay.setBackgroundColor(Color.WHITE);       // White background
+            textOverlay.setBackgroundColor(Color.TRANSPARENT); // Transparent background
             textOverlay.setTextColor(Color.BLACK);            // Black text
             textOverlay.setTextSize(16);                      // Font size
             textOverlay.setSingleLine(false);                 // Multiline input
             textOverlay.setPadding(20, 20, 20, 20);
-            textOverlay.setVisibility(View.GONE);             // Start hidden (drawing mode default)
-            textOverlay.setLayoutParams(fullScreenParams);
+            textOverlay.setLayoutParams(drawingParams);
+            pageLayout.addView(textOverlay);
+
+            // Add listener for auto-pagination
+            textOverlay.addTextChangedListener(new TextWatcher() {
+                @Override
+                public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
+
+                @Override
+                public void onTextChanged(CharSequence s, int start, int before, int count) {
+                    if (textOverlay.getLineCount() > 15) { // Assuming 15 lines per page
+                        textOverlay.setText(textOverlay.getText().subSequence(0, start)); // Limit text
+                        addNewPage(context); // Create a new page
+                    }
+                }
+
+                @Override
+                public void afterTextChanged(Editable s) {}
+            });
+        }
+
+        // Add a new page
+        private void addNewPage(Activity context) {
+            // Logic for adding a new page
         }
     }
 
@@ -309,17 +325,19 @@ public class NoteEditorActivity extends Activity {
             paint.setStrokeWidth(8f);  // Line thickness
             paint.setStyle(Paint.Style.STROKE);
             paint.setAntiAlias(true);
+
+            // Initialize a bitmap to store the drawing
+            bitmap = Bitmap.createBitmap(1000, 1000, Bitmap.Config.ARGB_8888);
+            canvas = new Canvas(bitmap); // Canvas to draw on
         }
 
         @Override
         protected void onSizeChanged(int w, int h, int oldw, int oldh) {
             super.onSizeChanged(w, h, oldw, oldh);
 
-            // Check that width and height are greater than 0
-            if (w > 0 && h > 0) {
-                bitmap = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888);
-                canvas = new Canvas(bitmap);
-            }
+            // Resize the bitmap to match the view size
+            bitmap = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888);
+            canvas = new Canvas(bitmap);
         }
 
         @Override
@@ -327,9 +345,7 @@ public class NoteEditorActivity extends Activity {
             super.onDraw(canvas);
 
             // Draw the bitmap on the canvas
-            if (bitmap != null) {
-                canvas.drawBitmap(bitmap, 0, 0, null);
-            }
+            canvas.drawBitmap(bitmap, 0, 0, null);
         }
 
         @Override
@@ -348,9 +364,7 @@ public class NoteEditorActivity extends Activity {
 
                 case MotionEvent.ACTION_MOVE:
                     // Draw a line between the last position and the current position
-                    if (canvas != null) {
-                        canvas.drawLine(lastX, lastY, x, y, paint);
-                    }
+                    canvas.drawLine(lastX, lastY, x, y, paint);
                     lastX = x;
                     lastY = y;
 
@@ -358,6 +372,7 @@ public class NoteEditorActivity extends Activity {
                     invalidate();
                     break;
             }
+
             return true;
         }
 
