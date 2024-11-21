@@ -298,22 +298,28 @@ package com.example.notesplugin;
 
 import android.app.Activity;
 import android.graphics.Color;
-import android.graphics.drawable.GradientDrawable;
+import android.graphics.Paint;
+import android.graphics.Path;
 import android.os.Bundle;
 import android.text.Editable;
 import android.text.TextWatcher;
+import android.view.MotionEvent;
+import android.view.View;
 import android.view.ViewGroup;
+import android.widget.Button;
 import android.widget.EditText;
+import android.widget.FrameLayout;
 import android.widget.LinearLayout;
 import android.widget.ScrollView;
-import android.view.View;
+
+import androidx.annotation.Nullable;
 
 public class NoteEditorActivity extends Activity {
 
     private LinearLayout pagesContainer; // Container for pages
     private ScrollView scrollView; // Main scrollable container
     private int screenHeight; // Screen height for creating full-page layouts
-    private EditText activeEditText; // Current EditText for writing
+    private LinearLayout activePage; // Reference to the current page being edited
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -337,8 +343,22 @@ public class NoteEditorActivity extends Activity {
         // Add the first page
         createNewPage();
 
-        // Set ScrollView as the content view
-        setContentView(scrollView);
+        // Add a button to add a sketch area
+        Button addSketchButton = new Button(this);
+        addSketchButton.setText("Add Sketch Area");
+        addSketchButton.setOnClickListener(v -> addSketchToCurrentPage());
+        addSketchButton.setLayoutParams(new FrameLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT
+        ));
+
+        // Create a layout to hold the button and the ScrollView
+        FrameLayout mainLayout = new FrameLayout(this);
+        mainLayout.addView(scrollView);
+        mainLayout.addView(addSketchButton);
+
+        // Set the main layout as the content view
+        setContentView(mainLayout);
     }
 
     private void createNewPage() {
@@ -351,25 +371,20 @@ public class NoteEditorActivity extends Activity {
         );
         pageLayoutParams.setMargins(20, 20, 20, 20); // Add margins around each page
         pageLayout.setLayoutParams(pageLayoutParams);
-
-        // Set background with border radius and shadow
-        GradientDrawable pageBackground = new GradientDrawable();
-        pageBackground.setColor(Color.WHITE); // Background color
-        pageBackground.setCornerRadius(20); // Rounded corners
-        pageBackground.setStroke(4, Color.LTGRAY); // Border color and thickness
-        pageLayout.setBackground(pageBackground);
+        pageLayout.setBackgroundColor(Color.WHITE);
         pageLayout.setPadding(30, 30, 30, 30); // Add padding inside the page
 
         // Create an EditText for writing
         EditText pageEditText = new EditText(this);
         pageEditText.setLayoutParams(new LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT,
-                LinearLayout.LayoutParams.MATCH_PARENT
+                0,
+                1 // Weight to use remaining space for the EditText
         ));
-        pageEditText.setBackgroundColor(Color.TRANSPARENT); // Transparent background to match the container
+        pageEditText.setBackgroundColor(Color.TRANSPARENT);
         pageEditText.setTextColor(Color.BLACK);
         pageEditText.setTextSize(16);
-        pageEditText.setPadding(10, 10, 10, 10); // Internal padding for text
+        pageEditText.setPadding(10, 10, 10, 10);
         pageEditText.setSingleLine(false);
         pageEditText.setGravity(android.view.Gravity.TOP);
         pageEditText.setVerticalScrollBarEnabled(false);
@@ -399,8 +414,67 @@ public class NoteEditorActivity extends Activity {
         // Add the new page to the container
         pagesContainer.addView(pageLayout);
 
-        // Set focus to the new EditText
-        activeEditText = pageEditText;
-        activeEditText.requestFocus();
+        // Set the new page as the active page
+        activePage = pageLayout;
+    }
+
+    private void addSketchToCurrentPage() {
+        if (activePage == null) return;
+
+        // Create a sketch area
+        SketchView sketchView = new SketchView(this);
+        sketchView.setLayoutParams(new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                500 // Fixed height for the sketch area
+        ));
+        sketchView.setBackgroundColor(Color.LTGRAY);
+
+        // Add the sketch area to the active page
+        activePage.addView(sketchView);
+    }
+
+    // Custom View for the Sketch Area
+    private static class SketchView extends View {
+
+        private final Paint paint;
+        private final Path path;
+
+        public SketchView(Activity context) {
+            super(context);
+            paint = new Paint();
+            paint.setColor(Color.BLACK);
+            paint.setStyle(Paint.Style.STROKE);
+            paint.setStrokeWidth(8);
+            paint.setAntiAlias(true);
+            paint.setStrokeCap(Paint.Cap.ROUND);
+
+            path = new Path();
+        }
+
+        @Override
+        protected void onDraw(android.graphics.Canvas canvas) {
+            super.onDraw(canvas);
+            canvas.drawPath(path, paint);
+        }
+
+        @Override
+        public boolean onTouchEvent(MotionEvent event) {
+            float x = event.getX();
+            float y = event.getY();
+
+            switch (event.getAction()) {
+                case MotionEvent.ACTION_DOWN:
+                    path.moveTo(x, y);
+                    break;
+                case MotionEvent.ACTION_MOVE:
+                    path.lineTo(x, y);
+                    break;
+                case MotionEvent.ACTION_UP:
+                    break;
+            }
+
+            invalidate(); // Redraw the view
+            return true;
+        }
     }
 }
