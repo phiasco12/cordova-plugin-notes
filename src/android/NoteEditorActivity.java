@@ -323,14 +323,7 @@ public class NoteEditorActivity extends Activity {
         screenHeight = getResources().getDisplayMetrics().heightPixels;
 
         // Main ScrollView container
-        scrollView = new ScrollView(this) {
-            @Override
-            protected void onScrollChanged(int l, int t, int oldl, int oldt) {
-                super.onScrollChanged(l, t, oldl, oldt);
-                // Smooth scrolling logic (can customize if needed)
-            }
-        };
-
+        scrollView = new ScrollView(this);
         scrollView.setLayoutParams(new FrameLayout.LayoutParams(
                 FrameLayout.LayoutParams.MATCH_PARENT,
                 FrameLayout.LayoutParams.MATCH_PARENT
@@ -396,12 +389,9 @@ public class NoteEditorActivity extends Activity {
             public void onTextChanged(CharSequence s, int start, int before, int count) {
                 // Check if text height exceeds the current page height
                 int totalLinesHeight = pageEditText.getLineHeight() * pageEditText.getLineCount();
-                if (totalLinesHeight >= screenHeight - 40) { // Adjust for padding
-                    pageEditText.removeTextChangedListener(this); // Remove listener to avoid recursion
+                if (totalLinesHeight > screenHeight - 100) { // Adjust for padding and separators
                     addNewPage(); // Add a new page
-
-                    // Automatically move focus to the new page's EditText
-                    currentEditText.requestFocus();
+                    currentEditText.requestFocus(); // Automatically move focus to the new page
                 }
             }
 
@@ -412,8 +402,8 @@ public class NoteEditorActivity extends Activity {
         // Focus listener to adjust scrolling
         pageEditText.setOnFocusChangeListener((v, hasFocus) -> {
             if (hasFocus) {
-                // Scroll to the EditText when it gains focus
-                scrollView.post(() -> scrollView.smoothScrollTo(0, pageEditText.getTop() - 20));
+                // Ensure proper scroll positioning on focus
+                scrollView.post(() -> scrollView.smoothScrollTo(0, pageEditText.getTop()));
             }
         });
 
@@ -424,4 +414,3 @@ public class NoteEditorActivity extends Activity {
         pagesContainer.addView(pageLayout);
     }
 }
-
