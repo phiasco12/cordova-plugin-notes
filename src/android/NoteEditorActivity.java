@@ -303,12 +303,13 @@ import android.graphics.Path;
 import android.os.Bundle;
 import android.text.Editable;
 import android.text.TextWatcher;
+import android.view.Gravity;
 import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.Button;
 import android.widget.EditText;
 import android.widget.FrameLayout;
+import android.widget.ImageButton;
 import android.widget.LinearLayout;
 import android.widget.ScrollView;
 
@@ -344,19 +345,32 @@ public class NoteEditorActivity extends Activity {
         // Add the first page
         createNewPage();
 
-        // Add a button to add a sketch area
-        Button addSketchButton = new Button(this);
-        addSketchButton.setText("Add Sketch Area");
-        addSketchButton.setOnClickListener(v -> addSketchToActivePage());
-        addSketchButton.setLayoutParams(new FrameLayout.LayoutParams(
+        // Create a toolbar with a drawing button
+        LinearLayout toolbar = new LinearLayout(this);
+        toolbar.setOrientation(LinearLayout.HORIZONTAL);
+        toolbar.setGravity(Gravity.BOTTOM);
+        toolbar.setBackgroundColor(Color.DKGRAY);
+        toolbar.setLayoutParams(new FrameLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT,
-                ViewGroup.LayoutParams.WRAP_CONTENT
+                150 // Fixed height for the toolbar
         ));
 
-        // Create a layout to hold the button and the ScrollView
+        // Add a drawing button to the toolbar
+        ImageButton drawButton = new ImageButton(this);
+        drawButton.setImageResource(android.R.drawable.ic_menu_edit); // Drawing icon
+        drawButton.setBackgroundColor(Color.LTGRAY);
+        drawButton.setLayoutParams(new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.WRAP_CONTENT,
+                LinearLayout.LayoutParams.MATCH_PARENT
+        ));
+        drawButton.setOnClickListener(v -> addSketchToActivePage());
+
+        toolbar.addView(drawButton);
+
+        // Create a layout to hold the toolbar and the ScrollView
         FrameLayout mainLayout = new FrameLayout(this);
         mainLayout.addView(scrollView);
-        mainLayout.addView(addSketchButton);
+        mainLayout.addView(toolbar);
 
         // Set the main layout as the content view
         setContentView(mainLayout);
@@ -387,7 +401,7 @@ public class NoteEditorActivity extends Activity {
         pageEditText.setTextSize(16);
         pageEditText.setPadding(10, 10, 10, 10);
         pageEditText.setSingleLine(false);
-        pageEditText.setGravity(android.view.Gravity.TOP);
+        pageEditText.setGravity(Gravity.TOP);
         pageEditText.setVerticalScrollBarEnabled(false);
 
         // Add a listener to track the current active page
