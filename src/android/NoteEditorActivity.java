@@ -307,6 +307,7 @@ import android.widget.EditText;
 import android.widget.FrameLayout;
 import android.widget.LinearLayout;
 import android.widget.ScrollView;
+import android.graphics.drawable.GradientDrawable;
 import android.view.View;
 
 public class NoteEditorActivity extends Activity {
@@ -339,9 +340,9 @@ public class NoteEditorActivity extends Activity {
         addNewPage();
 
         // Ensure padding/margin adjustments for proper scrolling
-        scrollView.setPadding(0, 0, 0, 0); // Optional: add padding for better UI
-        scrollView.setClipToPadding(false); // Ensure no clipping at the top/bottom
-        scrollView.setFillViewport(true); // Ensure the viewport fills the available space
+        scrollView.setPadding(0, 0, 0, 0); // Optional: adjust padding for better spacing
+        scrollView.setClipToPadding(false); // Prevent clipping at the edges
+        scrollView.setFillViewport(true); // Ensure the first page fills the viewport
 
         // Set the ScrollView as the main content
         setContentView(scrollView);
@@ -354,27 +355,34 @@ public class NoteEditorActivity extends Activity {
             View separator = new View(this);
             LinearLayout.LayoutParams separatorParams = new LinearLayout.LayoutParams(
                     ViewGroup.LayoutParams.MATCH_PARENT,
-                    4 // Height of the separator (e.g., 4px)
+                    20 // Height of the separator (e.g., 20px for more spacing)
             );
-            separator.setBackgroundColor(Color.LTGRAY); // Light gray for the separator
+            separator.setBackgroundColor(Color.TRANSPARENT); // Spacer with no color
             separator.setLayoutParams(separatorParams);
             pagesContainer.addView(separator);
         }
 
         // Create a page container with 100% screen height
         FrameLayout pageLayout = new FrameLayout(this);
-        pageLayout.setLayoutParams(new LinearLayout.LayoutParams(
+        LinearLayout.LayoutParams pageParams = new LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT,
                 screenHeight // Full screen height
-        ));
-        pageLayout.setBackgroundColor(Color.WHITE); // White background for the page
+        );
+        pageParams.setMargins(20, 20, 20, 20); // Add margin around the page
+        pageLayout.setLayoutParams(pageParams);
+
+        // Apply a border radius and background color to the page
+        GradientDrawable pageBackground = new GradientDrawable();
+        pageBackground.setColor(Color.WHITE); // Page background color
+        pageBackground.setCornerRadius(20f); // Rounded corners with radius of 20px
+        pageLayout.setBackground(pageBackground);
 
         // Add an EditText for typing
         EditText pageEditText = new EditText(this);
         pageEditText.setBackgroundColor(Color.TRANSPARENT); // Transparent background
         pageEditText.setTextColor(Color.BLACK);             // Black text color
         pageEditText.setTextSize(16);                       // Font size
-        pageEditText.setPadding(20, 20, 20, 20);            // Add padding inside the EditText
+        pageEditText.setPadding(40, 40, 40, 40);            // Add padding inside the EditText
         pageEditText.setLayoutParams(new FrameLayout.LayoutParams(
                 FrameLayout.LayoutParams.MATCH_PARENT,
                 FrameLayout.LayoutParams.MATCH_PARENT
@@ -395,7 +403,7 @@ public class NoteEditorActivity extends Activity {
             public void onTextChanged(CharSequence s, int start, int before, int count) {
                 // Check if text height exceeds the current page height
                 int totalLinesHeight = pageEditText.getLineHeight() * pageEditText.getLineCount();
-                if (totalLinesHeight >= screenHeight) {
+                if (totalLinesHeight >= screenHeight - 80) { // Adjust for padding/margin
                     pageEditText.removeTextChangedListener(this); // Remove listener to avoid recursion
                     addNewPage(); // Add a new page
 
@@ -423,4 +431,3 @@ public class NoteEditorActivity extends Activity {
         pagesContainer.addView(pageLayout);
     }
 }
-
