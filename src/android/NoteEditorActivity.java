@@ -31,7 +31,11 @@ public class NoteEditorActivity extends Activity {
 
         // Initialize the drawing canvas
         drawingView = new DrawingView(this);
-        layout.addView(drawingView);
+        FrameLayout.LayoutParams fullScreenParams = new FrameLayout.LayoutParams(
+                FrameLayout.LayoutParams.MATCH_PARENT,
+                FrameLayout.LayoutParams.MATCH_PARENT
+        );
+        layout.addView(drawingView, fullScreenParams);
 
         // Initialize the text overlay
         textOverlay = new EditText(this);
@@ -40,7 +44,7 @@ public class NoteEditorActivity extends Activity {
         textOverlay.setTextSize(16);                      // Font size
         textOverlay.setSingleLine(false);                 // Multiline input
         textOverlay.setPadding(20, 20, 20, 20);
-        textOverlay.setVisibility(View.GONE);             // Start hidden (drawing mode default)
+        textOverlay.setLayoutParams(fullScreenParams);
         layout.addView(textOverlay);
 
         // Add toggle button
@@ -74,15 +78,14 @@ public class NoteEditorActivity extends Activity {
         isDrawingMode = !isDrawingMode;
 
         if (isDrawingMode) {
-            // Switch to drawing mode
-            textOverlay.setVisibility(View.GONE);
-            drawingView.setVisibility(View.VISIBLE);
+            // Enable drawing
+            textOverlay.clearFocus(); // Dismiss the keyboard
+            drawingView.setTouchEnabled(true);
             toggleButton.setText("Toggle to Typing");
         } else {
-            // Switch to typing mode
-            textOverlay.setVisibility(View.VISIBLE);
-            textOverlay.requestFocus();
-            drawingView.setVisibility(View.GONE);
+            // Enable typing
+            textOverlay.requestFocus(); // Show the keyboard
+            drawingView.setTouchEnabled(false);
             toggleButton.setText("Toggle to Drawing");
         }
     }
@@ -90,22 +93,19 @@ public class NoteEditorActivity extends Activity {
     // Save the current drawing and text content
     private void saveContent() {
         // Save the drawing as a Bitmap
-        savedBitmap = Bitmap.createBitmap(drawingView.getWidth(), drawingView.getHeight(), Bitmap.Config.ARGB_8888);
-        Canvas canvas = new Canvas(savedBitmap);
-        drawingView.draw(canvas);
-
-        // Get the text content
-        String textContent = textOverlay.getText().toString();
+        Bitmap combinedBitmap = Bitmap.createBitmap(drawingView.getWidth(), drawingView.getHeight(), Bitmap.Config.ARGB_8888);
+        Canvas canvas = new Canvas(combinedBitmap);
+        drawingView.draw(canvas); // Draw the canvas content
+        textOverlay.draw(canvas); // Overlay the text content
 
         // Convert the bitmap to a byte array
         ByteArrayOutputStream stream = new ByteArrayOutputStream();
-        savedBitmap.compress(Bitmap.CompressFormat.PNG, 100, stream);
+        combinedBitmap.compress(Bitmap.CompressFormat.PNG, 100, stream);
         byte[] bitmapBytes = stream.toByteArray();
 
         // Return the data to the previous activity
         Intent resultIntent = new Intent();
-        resultIntent.putExtra("drawing", bitmapBytes);
-        resultIntent.putExtra("text", textContent);
+        resultIntent.putExtra("noteImage", bitmapBytes);
         setResult(RESULT_OK, resultIntent);
         finish();
     }
@@ -115,6 +115,7 @@ public class NoteEditorActivity extends Activity {
         private Paint paint;
         private Canvas canvas;
         private Bitmap bitmap;
+        private boolean touchEnabled = true; // Toggle touch handling
         private float lastX, lastY;
 
         public DrawingView(Activity context) {
@@ -140,6 +141,8 @@ public class NoteEditorActivity extends Activity {
 
         @Override
         public boolean onTouchEvent(MotionEvent event) {
+            if (!touchEnabled) return false;
+
             float x = event.getX();
             float y = event.getY();
 
@@ -157,6 +160,10 @@ public class NoteEditorActivity extends Activity {
                     break;
             }
             return true;
+        }
+
+        public void setTouchEnabled(boolean enabled) {
+            this.touchEnabled = enabled;
         }
     }
 }
