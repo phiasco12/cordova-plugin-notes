@@ -175,6 +175,7 @@ public class NoteEditorActivity extends Activity {
     private LinearLayout pagesContainer; // Container for all pages
     private int screenHeight; // Screen height for 100% height calculation
     private EditText currentEditText; // Reference to the current active EditText
+    private ScrollView scrollView; // ScrollView to manage scrolling
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -184,7 +185,17 @@ public class NoteEditorActivity extends Activity {
         screenHeight = getResources().getDisplayMetrics().heightPixels;
 
         // Main ScrollView container
-        ScrollView scrollView = new ScrollView(this);
+        scrollView = new ScrollView(this) {
+            @Override
+            protected void onScrollChanged(int l, int t, int oldl, int oldt) {
+                super.onScrollChanged(l, t, oldl, oldt);
+                // Ensure we can scroll all the way to the top
+                if (t == 0) {
+                    scrollView.scrollTo(0, 0); // Reset to top if scrolled too far
+                }
+            }
+        };
+
         scrollView.setLayoutParams(new FrameLayout.LayoutParams(
                 FrameLayout.LayoutParams.MATCH_PARENT,
                 FrameLayout.LayoutParams.MATCH_PARENT
@@ -261,6 +272,14 @@ public class NoteEditorActivity extends Activity {
 
             @Override
             public void afterTextChanged(Editable s) {}
+        });
+
+        // Focus listener to adjust scrolling
+        pageEditText.setOnFocusChangeListener((v, hasFocus) -> {
+            if (hasFocus) {
+                // Scroll to the EditText when it gains focus
+                scrollView.post(() -> scrollView.smoothScrollTo(0, pageEditText.getTop()));
+            }
         });
 
         // Add the EditText to the page
