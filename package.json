@@ -1,0 +1,30 @@
+{
+  "name": "cordova-plugin-notes",
+  "version": "0.1.0",
+  "description": "A sample for a new cordova plugin",
+  "cordova": {
+    "id": "cordova-plugin-notes",
+    "platforms": [
+      "android",
+      "ios",
+      "wp7"
+    ]
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/phiasco12/cordova-plugin-notes.git"
+  },
+  "keywords": [
+    "cordova",
+    "plugin",
+    "hello",
+    "ecosystem:cordova",
+    "cordova-android"
+  ],
+  "author": "Rooz Farhadi",
+  "license": "Apache-2",
+  "bugs": {
+    "url": "https://github.com/phiasco12/cordova-plugin-notes/issues"
+  },
+  "homepage": "https://github.com/phiasco12/cordova-plugin-notes#readme"
+}
