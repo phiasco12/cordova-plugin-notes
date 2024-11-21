@@ -282,7 +282,7 @@ public class NoteEditorActivity extends Activity {
 
             // Initialize EditText
             textOverlay = new EditText(context);
-            textOverlay.setBackgroundColor(Color.TRANSPARENT); // Transparent background
+            textOverlay.setBackgroundColor(Color.WHITE);       // White background
             textOverlay.setTextColor(Color.BLACK);            // Black text
             textOverlay.setTextSize(16);                      // Font size
             textOverlay.setSingleLine(false);                 // Multiline input
