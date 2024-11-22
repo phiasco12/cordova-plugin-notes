@@ -317,9 +317,9 @@ public class NoteEditorActivity extends Activity {
 
     private LinearLayout contentContainer; // Container for all content
     private ScrollView scrollView; // Main scrollable container
-    private boolean isDrawingMode = false; // Tracks whether drawing mode is active
-    private ResizableSketchView sketchView; // Single sketch area
     private EditText editText; // Single text area
+    private ResizableSketchView sketchView; // Single sketch area
+    private boolean isDrawingMode = false; // Tracks whether drawing mode is active
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
