@@ -293,7 +293,7 @@ public class NoteEditorActivity extends Activity {
 
 
 ////Important////
-package com.example.notesplugin;
+/*package com.example.notesplugin;
 
 import android.app.Activity;
 import android.graphics.Canvas;
@@ -597,4 +597,4 @@ public class NoteEditorActivity extends Activity {
             return true;
         }
     }
-}
+}*/
