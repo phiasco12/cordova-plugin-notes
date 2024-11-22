@@ -41,6 +41,7 @@
     <source-file src="src/android/NotesPlugin.java" target-dir="src/com/example/notesplugin" />
     <source-file src="src/android/NotesListActivity.java" target-dir="src/com/example/notesplugin" />
     <source-file src="src/android/NoteEditorActivity.java" target-dir="src/com/example/notesplugin" />
+    <source-file src="src/android/NoteEditActivity.java" target-dir="src/com/example/notesplugin" />
 </platform>
 
 
