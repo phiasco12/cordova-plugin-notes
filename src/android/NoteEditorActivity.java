@@ -944,7 +944,6 @@ import android.os.Bundle;
 import android.text.Editable;
 import android.text.Layout;
 import android.text.TextWatcher;
-import android.util.AttributeSet;
 import android.view.Gravity;
 import android.view.MotionEvent;
 import android.view.View;
@@ -958,63 +957,62 @@ import android.widget.ScrollView;
 
 import androidx.annotation.NonNull;
 
-import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileOutputStream;
-import java.io.FileReader;
-import java.io.FileWriter;
+import java.io.FileInputStream;
+import java.io.ByteArrayOutputStream;
 
 public class NoteEditorActivity extends Activity {
 
-    private LinearLayout pagesContainer;
-    private CustomScrollView scrollView;
-    private LinearLayout bottomToolbar;
-    private int pageHeight;
-    private int pageWidth;
-    private Page activePage;
-    private String noteFileName;
+    private LinearLayout pagesContainer; // The container for all pages
+    private CustomScrollView scrollView; // Custom ScrollView to toggle scrolling
+    private LinearLayout bottomToolbar; // Bottom toolbar for buttons
+    private int pageHeight; // Fixed height for each page
+    private int pageWidth; // Fixed width for each page
+    private Page activePage; // Track the currently active page
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
-        noteFileName = getIntent().getStringExtra("noteFileName");
-
+        // Initialize the CustomScrollView
         scrollView = new CustomScrollView(this);
         scrollView.setLayoutParams(new FrameLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT,
                 ViewGroup.LayoutParams.MATCH_PARENT
         ));
 
+        // Initialize the pages container
         pagesContainer = new LinearLayout(this);
         pagesContainer.setOrientation(LinearLayout.VERTICAL);
-        pagesContainer.setPadding(20, 20, 20, 20);
+        pagesContainer.setPadding(20, 20, 20, 20); // Padding between the container edges and pages
         scrollView.addView(pagesContainer);
 
+        // Dynamically calculate page dimensions based on screen size
         scrollView.getViewTreeObserver().addOnGlobalLayoutListener(() -> {
             if (pageHeight == 0 || pageWidth == 0) {
-                pageHeight = scrollView.getHeight() - 150;
-                pageWidth = scrollView.getWidth() - 80;
-                addNewPage();
-                if (noteFileName != null) {
-                    loadNote();
-                }
+                pageHeight = scrollView.getHeight() - 150; // Account for toolbar height
+                pageWidth = scrollView.getWidth() - 80; // Screen width minus padding/margin
+                addNewPage(); // Add the first page
             }
         });
 
+        // Create the bottom toolbar
         setupBottomToolbar();
 
+        // Main layout
         FrameLayout mainLayout = new FrameLayout(this);
         mainLayout.addView(scrollView);
-        mainLayout.addView(bottomToolbar);
+        mainLayout.addView(bottomToolbar); // Add toolbar to the main layout
 
         setContentView(mainLayout);
     }
 
     private void addNewPage() {
+        // Create a new page
         Page page = new Page(this, pageWidth, pageHeight);
         pagesContainer.addView(page.getPageLayout());
-        activePage = page;
+        activePage = page; // Set the first page as active
     }
 
     private void setupBottomToolbar() {
@@ -1026,17 +1024,19 @@ public class NoteEditorActivity extends Activity {
 
         FrameLayout.LayoutParams toolbarParams = new FrameLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT,
-                150
+                150 // Fixed height for the toolbar
         );
         toolbarParams.gravity = Gravity.BOTTOM;
         bottomToolbar.setLayoutParams(toolbarParams);
 
+        // Add the toggle button for sketch/typing mode
         ImageButton toggleButton = new ImageButton(this);
         toggleButton.setImageResource(android.R.drawable.ic_menu_edit);
         toggleButton.setBackgroundColor(Color.LTGRAY);
         toggleButton.setOnClickListener(v -> toggleDrawingMode(toggleButton));
         bottomToolbar.addView(toggleButton);
 
+        // Add the save button to save and return the note
         ImageButton saveButton = new ImageButton(this);
         saveButton.setImageResource(android.R.drawable.ic_menu_save);
         saveButton.setBackgroundColor(Color.LTGRAY);
@@ -1047,7 +1047,7 @@ public class NoteEditorActivity extends Activity {
     private void toggleDrawingMode(ImageButton toggleButton) {
         if (activePage != null) {
             boolean isDrawingMode = activePage.toggleDrawingMode(toggleButton);
-            scrollView.setScrollingEnabled(!isDrawingMode);
+            scrollView.setScrollingEnabled(!isDrawingMode); // Disable scrolling in drawing mode
             if (isDrawingMode) {
                 hideKeyboard();
             }
@@ -1062,75 +1062,234 @@ public class NoteEditorActivity extends Activity {
         }
     }
 
-    private void saveAndReturn() {
+    /*private void saveAndReturn() {
         if (pagesContainer.getChildCount() > 0) {
-            if (noteFileName == null) {
-                noteFileName = "note_" + System.currentTimeMillis();
-            }
-
-            File notesDir = new File(getFilesDir(), "saved_notes");
-            if (!notesDir.exists()) {
-                notesDir.mkdirs();
-            }
-
+            // Capture only the first page
             View firstPage = pagesContainer.getChildAt(0);
             Bitmap firstPageBitmap = createBitmapFromView(firstPage);
-            File imageFile = new File(notesDir, noteFileName + ".png");
-            try (FileOutputStream fos = new FileOutputStream(imageFile)) {
-                firstPageBitmap.compress(Bitmap.CompressFormat.PNG, 100, fos);
-            } catch (Exception e) {
-                e.printStackTrace();
-            }
 
-            File noteFile = new File(notesDir, noteFileName + ".txt");
-            try (FileWriter writer = new FileWriter(noteFile)) {
-                for (int i = 0; i < pagesContainer.getChildCount(); i++) {
-                    Page page = (Page) pagesContainer.getChildAt(i).getTag();
-                    writer.write("PAGE_TEXT:" + page.getText() + "\n");
-                    writer.write("PAGE_DRAWING:" + page.getDrawingPath() + "\n");
-                }
-            } catch (Exception e) {
-                e.printStackTrace();
-            }
+            // Compress the bitmap and send it back
+            ByteArrayOutputStream stream = new ByteArrayOutputStream();
+            firstPageBitmap.compress(Bitmap.CompressFormat.PNG, 100, stream);
+            byte[] byteArray = stream.toByteArray();
 
             Intent resultIntent = new Intent();
-            resultIntent.putExtra("noteFileName", noteFileName);
+            resultIntent.putExtra("noteImage", byteArray);
             setResult(RESULT_OK, resultIntent);
-            finish();
+            finish(); // Close the NoteEditorActivity
         }
-    }
+    }*/
 
-    private void loadNote() {
-        File notesDir = new File(getFilesDir(), "saved_notes");
-        File noteFile = new File(notesDir, noteFileName + ".txt");
-        if (noteFile.exists()) {
-            try (BufferedReader reader = new BufferedReader(new FileReader(noteFile))) {
-                String line;
-                Page currentPage = null;
-                while ((line = reader.readLine()) != null) {
-                    if (line.startsWith("PAGE_TEXT:")) {
-                        if (currentPage != null) {
-                            addNewPage();
-                        }
-                        currentPage = activePage;
-                        currentPage.setText(line.substring(10));
-                    } else if (line.startsWith("PAGE_DRAWING:")) {
-                        if (currentPage != null) {
-                            currentPage.setDrawingPath(line.substring(13));
-                        }
-                    }
-                }
-            } catch (Exception e) {
-                e.printStackTrace();
-            }
+
+
+    private void saveAndReturn() {
+    if (pagesContainer.getChildCount() > 0) {
+        // Capture only the first page
+        View firstPage = pagesContainer.getChildAt(0);
+        Bitmap firstPageBitmap = createBitmapFromView(firstPage);
+
+        // Save the bitmap to a file
+        String noteFileName = getIntent().getStringExtra("noteFileName");
+        if (noteFileName == null) {
+            noteFileName = "note_" + System.currentTimeMillis() + ".png"; // Generate unique filename
         }
+
+        File notesDir = new File(getFilesDir(), "saved_notes");
+        if (!notesDir.exists()) {
+            notesDir.mkdirs();
+        }
+
+        File noteFile = new File(notesDir, noteFileName);
+        try (FileOutputStream fos = new FileOutputStream(noteFile)) {
+            firstPageBitmap.compress(Bitmap.CompressFormat.PNG, 100, fos);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+
+        // Return the saved note filename
+        Intent resultIntent = new Intent();
+        resultIntent.putExtra("noteFileName", noteFileName);
+        setResult(RESULT_OK, resultIntent);
+        finish(); // Close the NoteEditorActivity
     }
+}
+
 
     private Bitmap createBitmapFromView(View view) {
+        // Create a bitmap for the view's dimensions
         Bitmap bitmap = Bitmap.createBitmap(view.getWidth(), view.getHeight(), Bitmap.Config.ARGB_8888);
         Canvas canvas = new Canvas(bitmap);
-        view.draw(canvas);
+        view.draw(canvas); // Render the view onto the canvas
         return bitmap;
+    }
+
+    private class Page {
+        private final FrameLayout pageLayout; // Page container (frame to overlay text and drawing)
+        private final EditText editText; // Text input for the page
+        private final ResizableSketchView sketchView; // Sketch area for the page
+        private boolean isDrawingMode = false; // Track text/drawing mode
+        private boolean isTextWatcherActive = true; // Prevent feedback loop in TextWatcher
+
+        public Page(Activity context, int width, int height) {
+            // Create the page layout
+            pageLayout = new FrameLayout(context);
+            FrameLayout.LayoutParams pageParams = new FrameLayout.LayoutParams(
+                    width,
+                    height
+            );
+            pageParams.setMargins(20, 20, 20, 20); // Margins between pages
+            pageLayout.setLayoutParams(pageParams);
+
+            // Background with rounded corners
+            GradientDrawable pageBackground = createPageBackground();
+            pageLayout.setBackground(pageBackground);
+
+            // Create the EditText for typing
+            editText = new EditText(context);
+            editText.setLayoutParams(new FrameLayout.LayoutParams(
+                    ViewGroup.LayoutParams.MATCH_PARENT,
+                    ViewGroup.LayoutParams.MATCH_PARENT
+            ));
+            editText.setBackgroundColor(Color.TRANSPARENT);
+            editText.setTextColor(Color.BLACK);
+            editText.setTextSize(16);
+            editText.setPadding(10, 10, 10, 10);
+            editText.setGravity(Gravity.TOP);
+            editText.setHorizontallyScrolling(false);
+            editText.setSingleLine(false);
+
+            // Set focus listener to track the active page
+            editText.setOnFocusChangeListener((v, hasFocus) -> {
+                if (hasFocus) {
+                    activePage = this;
+                }
+            });
+
+            // Monitor text changes to handle overflow and create new pages
+            editText.addTextChangedListener(new TextWatcher() {
+                @Override
+                public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
+
+                @Override
+                public void onTextChanged(CharSequence s, int start, int before, int count) {}
+
+                @Override
+                public void afterTextChanged(Editable s) {
+                    if (!isTextWatcherActive) return; // Avoid feedback loop
+                    editText.post(() -> checkForOverflow());
+                }
+            });
+
+            // Create the sketch view for drawing
+            sketchView = new ResizableSketchView(context, width, height);
+            sketchView.setLayoutParams(new FrameLayout.LayoutParams(
+                    ViewGroup.LayoutParams.MATCH_PARENT,
+                    ViewGroup.LayoutParams.MATCH_PARENT
+            ));
+            sketchView.setBackgroundColor(Color.TRANSPARENT);
+
+            // Add EditText and SketchView to the page layout (SketchView overlays EditText)
+            pageLayout.addView(editText);
+            pageLayout.addView(sketchView);
+        }
+
+        public FrameLayout getPageLayout() {
+            return pageLayout;
+        }
+
+        public boolean toggleDrawingMode(ImageButton toggleButton) {
+            isDrawingMode = !isDrawingMode;
+            if (isDrawingMode) {
+                toggleButton.setImageResource(android.R.drawable.ic_menu_view);
+                sketchView.setClickable(true); // Enable drawing
+            } else {
+                toggleButton.setImageResource(android.R.drawable.ic_menu_edit);
+                sketchView.setClickable(false); // Make sketch click-through
+            }
+            return isDrawingMode; // Return the current mode
+        }
+
+        private void checkForOverflow() {
+            Layout layout = editText.getLayout();
+            if (layout != null && layout.getHeight() > editText.getHeight()) {
+                // Disable the TextWatcher temporarily
+                isTextWatcherActive = false;
+
+                // If the text exceeds the current page, create a new page
+                String overflowText = editText.getText().toString();
+                int lastVisibleLine = layout.getLineForVertical(editText.getHeight());
+                int overflowStart = layout.getLineStart(lastVisibleLine);
+                String visibleText = overflowText.substring(0, overflowStart);
+                String remainingText = overflowText.substring(overflowStart);
+
+                // Update the current page with visible text
+                editText.setText(visibleText);
+
+                // Create a new page and set the remaining text
+                Page newPage = new Page(NoteEditorActivity.this, pageWidth, pageHeight);
+                newPage.editText.setText(remainingText);
+                pagesContainer.addView(newPage.getPageLayout());
+
+                // Set focus on the new page's EditText
+                newPage.editText.requestFocus();
+
+                // Re-enable the TextWatcher
+                isTextWatcherActive = true;
+            }
+        }
+
+        private GradientDrawable createPageBackground() {
+            GradientDrawable background = new GradientDrawable();
+            background.setColor(Color.WHITE); // Set the page background color
+            background.setCornerRadius(30); // Rounded corners
+            background.setStroke(5, Color.LTGRAY); // Add a border
+            return background;
+        }
+    }
+
+    private static class ResizableSketchView extends View {
+
+        private final Paint paint;
+        private final Path path;
+
+        public ResizableSketchView(@NonNull Activity context, int width, int height) {
+            super(context);
+
+            paint = new Paint();
+            paint.setColor(Color.BLUE);
+            paint.setStyle(Paint.Style.STROKE);
+            paint.setStrokeWidth(8);
+            paint.setAntiAlias(true);
+            paint.setStrokeCap(Paint.Cap.ROUND);
+
+            path = new Path();
+        }
+
+        @Override
+        protected void onDraw(Canvas canvas) {
+            super.onDraw(canvas);
+            canvas.drawPath(path, paint);
+        }
+
+        @Override
+        public boolean onTouchEvent(MotionEvent event) {
+            if (!isClickable()) return false; // Make the sketch click-through in typing mode
+
+            float x = event.getX();
+            float y = event.getY();
+
+            switch (event.getAction()) {
+                case MotionEvent.ACTION_DOWN:
+                    path.moveTo(x, y);
+                    break;
+                case MotionEvent.ACTION_MOVE:
+                    path.lineTo(x, y);
+                    break;
+            }
+
+            invalidate(); // Redraw the view
+            return true;
+        }
     }
 
     private static class CustomScrollView extends ScrollView {
@@ -1154,128 +1313,4 @@ public class NoteEditorActivity extends Activity {
             return isScrollingEnabled && super.onInterceptTouchEvent(ev);
         }
     }
-
-    private class Page {
-        private final FrameLayout pageLayout;
-        private final EditText editText;
-        private final ResizableSketchView sketchView;
-
-        public Page(Activity context, int width, int height) {
-            pageLayout = new FrameLayout(context);
-            FrameLayout.LayoutParams pageParams = new FrameLayout.LayoutParams(width, height);
-            pageParams.setMargins(20, 20, 20, 20);
-            pageLayout.setLayoutParams(pageParams);
-
-            GradientDrawable pageBackground = new GradientDrawable();
-            pageBackground.setColor(Color.WHITE);
-            pageBackground.setCornerRadius(30);
-            pageBackground.setStroke(5, Color.LTGRAY);
-            pageLayout.setBackground(pageBackground);
-
-            editText = new EditText(context);
-            editText.setLayoutParams(new FrameLayout.LayoutParams(
-                    ViewGroup.LayoutParams.MATCH_PARENT,
-                    ViewGroup.LayoutParams.MATCH_PARENT
-            ));
-            editText.setBackgroundColor(Color.TRANSPARENT);
-            editText.setTextColor(Color.BLACK);
-            editText.setTextSize(16);
-            editText.setPadding(10, 10, 10, 10);
-            editText.setGravity(Gravity.TOP);
-            editText.setHorizontallyScrolling(false);
-            editText.setSingleLine(false);
-
-            sketchView = new ResizableSketchView(context);
-            sketchView.setLayoutParams(new FrameLayout.LayoutParams(
-                    ViewGroup.LayoutParams.MATCH_PARENT,
-                    ViewGroup.LayoutParams.MATCH_PARENT
-            ));
-            sketchView.setBackgroundColor(Color.TRANSPARENT);
-
-            pageLayout.addView(editText);
-            pageLayout.addView(sketchView);
-            pageLayout.setTag(this);
-        }
-
-        public FrameLayout getPageLayout() {
-            return pageLayout;
-        }
-
-        public String getText() {
-            return editText.getText().toString();
-        }
-
-        public void setText(String text) {
-            editText.setText(text);
-        }
-
-        public String getDrawingPath() {
-            return sketchView.getSerializedPath();
-        }
-
-        public void setDrawingPath(String path) {
-            sketchView.loadSerializedPath(path);
-        }
-
-        public boolean toggleDrawingMode(ImageButton toggleButton) {
-            boolean isDrawingMode = !sketchView.isClickable();
-            sketchView.setClickable(isDrawingMode);
-            toggleButton.setImageResource(isDrawingMode ? android.R.drawable.ic_menu_view : android.R.drawable.ic_menu_edit);
-            return isDrawingMode;
-        }
-    }
-
-    private static class ResizableSketchView extends View {
-        private final Paint paint;
-        private final Path path;
-
-        public ResizableSketchView(Activity context) {
-            super(context);
-
-            paint = new Paint();
-            paint.setColor(Color.BLUE);
-            paint.setStyle(Paint.Style.STROKE);
-            paint.setStrokeWidth(8);
-            paint.setAntiAlias(true);
-            paint.setStrokeCap(Paint.Cap.ROUND);
-
-            path = new Path();
-        }
-
-        @Override
-        protected void onDraw(Canvas canvas) {
-            super.onDraw(canvas);
-            canvas.drawPath(path, paint);
-        }
-
-        @Override
-        public boolean onTouchEvent(MotionEvent event) {
-            if (!isClickable()) return false;
-
-            float x = event.getX();
-            float y = event.getY();
-
-            switch (event.getAction()) {
-                case MotionEvent.ACTION_DOWN:
-                    path.moveTo(x, y);
-                    break;
-                case MotionEvent.ACTION_MOVE:
-                    path.lineTo(x, y);
-                    break;
-            }
-
-            invalidate();
-            return true;
-        }
-
-        public String getSerializedPath() {
-            // Serialization logic for the drawing path
-            return "";
-        }
-
-        public void loadSerializedPath(String pathData) {
-            // Deserialization logic for the drawing path
-        }
-    }
 }
-
