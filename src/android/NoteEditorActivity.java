@@ -612,8 +612,9 @@ import android.graphics.Paint;
 import android.graphics.Path;
 import android.graphics.drawable.GradientDrawable;
 import android.os.Bundle;
-import android.text.Editable;
+import android.text.Layout;
 import android.text.TextWatcher;
+import android.text.Editable;
 import android.view.Gravity;
 import android.view.MotionEvent;
 import android.view.View;
@@ -628,9 +629,10 @@ import androidx.annotation.NonNull;
 
 public class NoteEditorActivity extends Activity {
 
-    private LinearLayout contentContainer; // Container for all pages
-    private ScrollView scrollView; // Scrollable view for multiple pages
-    private int pageHeight; // Height of each page dynamically calculated
+    private LinearLayout pagesContainer; // The container for all pages
+    private ScrollView scrollView; // Scrollable container for the pages
+    private int pageHeight; // Fixed height for each page
+    private int pageWidth; // Fixed width for each page
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -643,15 +645,17 @@ public class NoteEditorActivity extends Activity {
                 ViewGroup.LayoutParams.MATCH_PARENT
         ));
 
-        // Create the main content container
-        contentContainer = new LinearLayout(this);
-        contentContainer.setOrientation(LinearLayout.VERTICAL);
-        scrollView.addView(contentContainer);
+        // Initialize the pages container
+        pagesContainer = new LinearLayout(this);
+        pagesContainer.setOrientation(LinearLayout.VERTICAL);
+        pagesContainer.setPadding(20, 20, 20, 20); // Padding between the container edges and pages
+        scrollView.addView(pagesContainer);
 
-        // Dynamically calculate page height
+        // Dynamically calculate page dimensions based on screen size
         scrollView.getViewTreeObserver().addOnGlobalLayoutListener(() -> {
-            if (pageHeight == 0) {
-                pageHeight = scrollView.getHeight(); // Set page height to the visible screen height
+            if (pageHeight == 0 || pageWidth == 0) {
+                pageHeight = scrollView.getHeight(); // Full visible height of the screen
+                pageWidth = scrollView.getWidth() - 80; // Screen width minus padding/margin
                 addNewPage(); // Add the first page
             }
         });
@@ -661,34 +665,34 @@ public class NoteEditorActivity extends Activity {
 
     private void addNewPage() {
         // Create a new page
-        Page page = new Page(this, pageHeight);
-        contentContainer.addView(page.getPageLayout());
+        Page page = new Page(this, pageWidth, pageHeight);
+        pagesContainer.addView(page.getPageLayout());
     }
 
     private class Page {
-        private final LinearLayout pageLayout; // Container for the page
+        private final LinearLayout pageLayout; // Page container
         private final EditText editText; // Text input for the page
         private final ResizableSketchView sketchView; // Sketch area for the page
-        private boolean isDrawingMode = false; // Mode toggle
+        private boolean isDrawingMode = false; // Track text/drawing mode
 
-        public Page(Activity context, int pageHeight) {
-            // Page container
+        public Page(Activity context, int width, int height) {
+            // Create the page layout
             pageLayout = new LinearLayout(context);
             pageLayout.setOrientation(LinearLayout.VERTICAL);
             LinearLayout.LayoutParams pageParams = new LinearLayout.LayoutParams(
-                    ViewGroup.LayoutParams.MATCH_PARENT,
-                    pageHeight
+                    width,
+                    height
             );
-            pageParams.setMargins(20, 20, 20, 20); // Margins for separation between pages
+            pageParams.setMargins(20, 20, 20, 20); // Margins between pages
             pageLayout.setLayoutParams(pageParams);
             pageLayout.setPadding(30, 30, 30, 30); // Padding inside the page
             pageLayout.setBackground(createPageBackground());
 
-            // Text input field
+            // Create the EditText for typing
             editText = new EditText(context);
             editText.setLayoutParams(new LinearLayout.LayoutParams(
                     ViewGroup.LayoutParams.MATCH_PARENT,
-                    ViewGroup.LayoutParams.WRAP_CONTENT
+                    ViewGroup.LayoutParams.MATCH_PARENT
             ));
             editText.setBackgroundColor(Color.TRANSPARENT);
             editText.setTextColor(Color.BLACK);
@@ -698,7 +702,7 @@ public class NoteEditorActivity extends Activity {
             editText.setHorizontallyScrolling(false);
             editText.setSingleLine(false);
 
-            // Watch for text overflow and add new pages as needed
+            // Monitor text changes to handle overflow and create new pages
             editText.addTextChangedListener(new TextWatcher() {
                 @Override
                 public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
@@ -712,7 +716,7 @@ public class NoteEditorActivity extends Activity {
                 }
             });
 
-            // Full-size sketch area for the page
+            // Create the sketch view for drawing
             sketchView = new ResizableSketchView(context);
             sketchView.setLayoutParams(new FrameLayout.LayoutParams(
                     ViewGroup.LayoutParams.MATCH_PARENT,
@@ -721,7 +725,7 @@ public class NoteEditorActivity extends Activity {
             sketchView.setBackgroundColor(Color.TRANSPARENT);
             sketchView.setVisibility(View.GONE); // Initially hidden
 
-            // Toggle button for switching between text and drawing modes
+            // Add a toggle button for switching between text and drawing modes
             ImageButton toggleButton = new ImageButton(context);
             toggleButton.setImageResource(android.R.drawable.ic_menu_edit);
             toggleButton.setBackgroundColor(Color.LTGRAY);
@@ -751,28 +755,29 @@ public class NoteEditorActivity extends Activity {
         }
 
         private void checkForOverflow() {
-            // Measure the height of the text inside the EditText
-            int totalHeight = editText.getHeight() + pageLayout.getPaddingTop() + pageLayout.getPaddingBottom();
-
-            // If the content overflows the page height, create a new page
-            if (totalHeight > pageHeight) {
+            Layout layout = editText.getLayout();
+            if (layout != null && layout.getHeight() > editText.getHeight()) {
+                // If the text exceeds the current page, create a new page
                 String overflowText = editText.getText().toString();
+                int lastVisibleLine = layout.getLineForVertical(editText.getHeight());
+                int overflowStart = layout.getLineStart(lastVisibleLine);
+                String visibleText = overflowText.substring(0, overflowStart);
+                String remainingText = overflowText.substring(overflowStart);
 
-                // Clear the current page and move the overflow text to a new page
-                editText.setText(overflowText.substring(0, overflowText.length() / 2));
-                String remainingText = overflowText.substring(overflowText.length() / 2);
+                // Update the current page with visible text
+                editText.setText(visibleText);
 
                 // Create a new page and set the remaining text
-                Page newPage = new Page(NoteEditorActivity.this, pageHeight);
+                Page newPage = new Page(NoteEditorActivity.this, pageWidth, pageHeight);
                 newPage.editText.setText(remainingText);
-                contentContainer.addView(newPage.getPageLayout());
+                pagesContainer.addView(newPage.getPageLayout());
             }
         }
 
         private GradientDrawable createPageBackground() {
             GradientDrawable background = new GradientDrawable();
-            background.setColor(Color.WHITE); // Set the background color
-            background.setCornerRadius(30); // Set rounded corners
+            background.setColor(Color.WHITE); // Set the page background color
+            background.setCornerRadius(30); // Rounded corners
             background.setStroke(5, Color.LTGRAY); // Add a border
             return background;
         }
@@ -823,4 +828,3 @@ public class NoteEditorActivity extends Activity {
         }
     }
 }
-
