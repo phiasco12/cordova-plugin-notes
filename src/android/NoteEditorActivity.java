@@ -609,9 +609,6 @@ import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Paint;
 import android.graphics.Path;
-import android.graphics.PorterDuff;
-import android.graphics.PorterDuffColorFilter;
-import android.graphics.drawable.Drawable;
 import android.os.Bundle;
 import android.text.Layout;
 import android.view.Gravity;
@@ -623,20 +620,14 @@ import android.widget.FrameLayout;
 import android.widget.ImageButton;
 import android.widget.LinearLayout;
 import android.widget.ScrollView;
-import android.widget.TextView;
 
 import androidx.annotation.NonNull;
-import androidx.appcompat.content.res.AppCompatResources;
-
-import java.lang.reflect.Field;
 
 public class NoteEditorActivity extends Activity {
 
-    private LinearLayout contentContainer; // Container for all content
-    private CustomScrollView scrollView; // Custom scrollable container
-    private boolean isDrawingMode = false; // Tracks whether drawing mode is active
-    private ResizableSketchView sketchView; // Single sketch area
-    private FrameLayout mainLayout; // Main layout to overlay cursor
+    private LinearLayout contentContainer;
+    private CustomScrollView scrollView;
+    private boolean isDrawingMode = false;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -652,38 +643,27 @@ public class NoteEditorActivity extends Activity {
         // LinearLayout for holding content
         contentContainer = new LinearLayout(this);
         contentContainer.setOrientation(LinearLayout.VERTICAL);
-        contentContainer.setPadding(20, 20, 20, 20); // Add padding around the content
-        contentContainer.setOnTouchListener((v, event) -> handleTouch(event)); // Detect touch
+        contentContainer.setPadding(20, 20, 20, 20);
         scrollView.addView(contentContainer);
 
-        // Create an initial text area
+        // Add an initial text area
         addNewTextField();
 
-        // Create a sketch area
-        sketchView = new ResizableSketchView(this);
-        sketchView.setLayoutParams(new LinearLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT,
-                500 // Initial height for the sketch area
-        ));
-        sketchView.setBackgroundColor(Color.TRANSPARENT);
-        sketchView.setEnabled(false); // Initially disabled
-        contentContainer.addView(sketchView);
-
-        // Create a toolbar with a toggle button
+        // Create a toolbar for toggle buttons
         LinearLayout toolbar = new LinearLayout(this);
         toolbar.setOrientation(LinearLayout.HORIZONTAL);
         toolbar.setGravity(Gravity.BOTTOM);
         toolbar.setBackgroundColor(Color.DKGRAY);
         FrameLayout.LayoutParams toolbarParams = new FrameLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT,
-                150 // Fixed height for the toolbar
+                150
         );
         toolbarParams.gravity = Gravity.BOTTOM;
         toolbar.setLayoutParams(toolbarParams);
 
-        // Add a toggle button for switching modes
+        // Toggle button for switching modes
         ImageButton toggleDrawButton = new ImageButton(this);
-        toggleDrawButton.setImageResource(android.R.drawable.ic_menu_edit); // Initial icon for drawing
+        toggleDrawButton.setImageResource(android.R.drawable.ic_menu_edit);
         toggleDrawButton.setBackgroundColor(Color.LTGRAY);
         toggleDrawButton.setLayoutParams(new LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.WRAP_CONTENT,
@@ -693,84 +673,23 @@ public class NoteEditorActivity extends Activity {
 
         toolbar.addView(toggleDrawButton);
 
-        // Create a layout to hold the toolbar and the ScrollView
-        mainLayout = new FrameLayout(this);
+        // Main layout to hold the toolbar and content
+        FrameLayout mainLayout = new FrameLayout(this);
         mainLayout.addView(scrollView);
         mainLayout.addView(toolbar);
 
-        // Set the main layout as the content view
         setContentView(mainLayout);
     }
 
-private boolean handleTouch(MotionEvent event) {
-    if (event.getAction() == MotionEvent.ACTION_DOWN && !isDrawingMode) {
-        float x = event.getX();
-        float y = event.getY();
-        addNewTextFieldAtExactPosition(x, y); // Add a new text field at the clicked position
-        return true;
-    }
-    return false;
-}
-
-private void addNewTextFieldAtExactPosition(float x, float y) {
-    // Create a new EditText
-    EditText newText = new EditText(this);
-    newText.setLayoutParams(new FrameLayout.LayoutParams(
-            ViewGroup.LayoutParams.MATCH_PARENT,
-            ViewGroup.LayoutParams.WRAP_CONTENT
-    ));
-    newText.setBackgroundColor(Color.TRANSPARENT);
-    newText.setTextColor(Color.BLACK);
-    newText.setTextSize(16);
-    newText.setPadding(10, 10, 10, 10);
-    newText.setGravity(Gravity.TOP);
-    newText.setHorizontallyScrolling(false); // Disable horizontal scrolling
-    newText.setSingleLine(false);
-    setCursorDrawableColor(newText, Color.RED); // Change cursor color to red
-
-    // Add the EditText to the content container at the calculated position
-    FrameLayout.LayoutParams params = new FrameLayout.LayoutParams(
-            ViewGroup.LayoutParams.MATCH_PARENT,
-            ViewGroup.LayoutParams.WRAP_CONTENT
-    );
-    params.topMargin = (int) y; // Set the vertical position
-    newText.setLayoutParams(params);
-
-    mainLayout.addView(newText); // Add to the main layout
-
-    // Focus the new EditText and ensure visibility
-    newText.requestFocus();
-
-    // Scroll to the new EditText to ensure it's visible
-    scrollView.post(() -> scrollView.smoothScrollTo(0, newText.getTop()));
-}
-
-
     private void toggleDrawingMode(ImageButton toggleButton) {
-        isDrawingMode = !isDrawingMode; // Toggle mode
+        isDrawingMode = !isDrawingMode;
 
         if (isDrawingMode) {
-            // Switch to drawing mode
-            toggleButton.setImageResource(android.R.drawable.ic_menu_view); // Change icon to text
-            scrollView.setScrollingEnabled(false); // Disable scrolling
-            for (int i = 0; i < contentContainer.getChildCount(); i++) {
-                View child = contentContainer.getChildAt(i);
-                if (child instanceof EditText) {
-                    child.setEnabled(false); // Disable all text areas
-                }
-            }
-            sketchView.setEnabled(true); // Enable drawing
+            toggleButton.setImageResource(android.R.drawable.ic_menu_view);
+            scrollView.setScrollingEnabled(false);
         } else {
-            // Switch back to typing mode
-            toggleButton.setImageResource(android.R.drawable.ic_menu_edit); // Change icon to draw
-            scrollView.setScrollingEnabled(true); // Enable scrolling
-            for (int i = 0; i < contentContainer.getChildCount(); i++) {
-                View child = contentContainer.getChildAt(i);
-                if (child instanceof EditText) {
-                    child.setEnabled(true); // Enable all text areas
-                }
-            }
-            sketchView.setEnabled(false); // Disable drawing
+            toggleButton.setImageResource(android.R.drawable.ic_menu_edit);
+            scrollView.setScrollingEnabled(true);
         }
     }
 
@@ -785,35 +704,27 @@ private void addNewTextFieldAtExactPosition(float x, float y) {
         newText.setTextSize(16);
         newText.setPadding(10, 10, 10, 10);
         newText.setGravity(Gravity.TOP);
-        newText.setHorizontallyScrolling(false); // Disable horizontal scrolling
+        newText.setHorizontallyScrolling(false);
         newText.setSingleLine(false);
-        setCursorDrawableColor(newText, Color.RED); // Change cursor color to red
+
+        newText.setOnFocusChangeListener((v, hasFocus) -> {
+            if (hasFocus && isDrawingMode) {
+                // Add a drawing area when in drawing mode
+                addNewDrawingArea();
+            }
+        });
+
         contentContainer.addView(newText);
     }
 
-    // Utility method to set the cursor color
-    private static void setCursorDrawableColor(EditText editText, int color) {
-        try {
-            Field cursorDrawableRes = TextView.class.getDeclaredField("mCursorDrawableRes");
-            cursorDrawableRes.setAccessible(true);
-            int drawableResId = cursorDrawableRes.getInt(editText);
-
-            Drawable cursorDrawable = AppCompatResources.getDrawable(editText.getContext(), drawableResId);
-            if (cursorDrawable != null) {
-                cursorDrawable.setColorFilter(new PorterDuffColorFilter(color, PorterDuff.Mode.SRC_IN));
-                Drawable[] drawables = {cursorDrawable, cursorDrawable};
-
-                Field editorField = TextView.class.getDeclaredField("mEditor");
-                editorField.setAccessible(true);
-                Object editor = editorField.get(editText);
-
-                Field cursorField = editor.getClass().getDeclaredField("mCursorDrawable");
-                cursorField.setAccessible(true);
-                cursorField.set(editor, drawables);
-            }
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
+    private void addNewDrawingArea() {
+        ResizableSketchView sketchView = new ResizableSketchView(this);
+        sketchView.setLayoutParams(new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                500 // Fixed height for drawing areas
+        ));
+        sketchView.setBackgroundColor(Color.LTGRAY);
+        contentContainer.addView(sketchView);
     }
 
     // Custom ScrollView to enable or disable scrolling
@@ -867,7 +778,7 @@ private void addNewTextFieldAtExactPosition(float x, float y) {
 
         @Override
         public boolean onTouchEvent(MotionEvent event) {
-            if (!isEnabled()) return false; // Ignore touch events when disabled
+            if (!isEnabled()) return false;
 
             float x = event.getX();
             float y = event.getY();
@@ -883,15 +794,8 @@ private void addNewTextFieldAtExactPosition(float x, float y) {
                     break;
             }
 
-            invalidate(); // Redraw the view
+            invalidate();
             return true;
         }
     }
 }
-
-
-
-
-
-
-
