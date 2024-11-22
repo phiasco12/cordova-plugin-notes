@@ -291,11 +291,13 @@ public class NoteEditorActivity extends Activity {
 }*/
 
 
-
 package com.example.notesplugin;
 
 import android.app.Activity;
+import android.graphics.Canvas;
 import android.graphics.Color;
+import android.graphics.Paint;
+import android.graphics.Path;
 import android.os.Bundle;
 import android.os.Handler;
 import android.view.Gravity;
@@ -517,7 +519,7 @@ public class NoteEditorActivity extends Activity {
         }
 
         @Override
-        protected void onDraw(android.graphics.Canvas canvas) {
+        protected void onDraw(Canvas canvas) {
             super.onDraw(canvas);
             canvas.drawPath(path, paint);
         }
@@ -545,5 +547,3 @@ public class NoteEditorActivity extends Activity {
         }
     }
 }
-
-
