@@ -676,17 +676,21 @@ public class NoteEditorActivity extends Activity {
         // Main layout to hold the toolbar and content
         FrameLayout mainLayout = new FrameLayout(this);
         mainLayout.addView(scrollView);
-        mainLayout.addView(toolbar);
 
         // Create the overlay sketch view but keep it hidden initially
         overlaySketchView = new ResizableSketchView(this);
-        overlaySketchView.setLayoutParams(new FrameLayout.LayoutParams(
+        FrameLayout.LayoutParams overlayParams = new FrameLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT,
                 ViewGroup.LayoutParams.MATCH_PARENT
-        ));
+        );
+        overlayParams.setMargins(0, 0, 0, 150); // Leave space for the toolbar
+        overlaySketchView.setLayoutParams(overlayParams);
         overlaySketchView.setBackgroundColor(Color.TRANSPARENT); // Fully transparent background
         overlaySketchView.setVisibility(View.GONE); // Hide it initially
         mainLayout.addView(overlaySketchView);
+
+        // Add the toolbar last so it stays on top
+        mainLayout.addView(toolbar);
 
         setContentView(mainLayout);
     }
@@ -698,11 +702,13 @@ public class NoteEditorActivity extends Activity {
             // Switch to drawing mode
             toggleButton.setImageResource(android.R.drawable.ic_menu_view);
             overlaySketchView.setVisibility(View.VISIBLE); // Show the overlay for drawing
+            overlaySketchView.setEnabled(true); // Enable interaction with the drawing area
             scrollView.setScrollingEnabled(false); // Disable scrolling
         } else {
             // Switch back to typing mode
             toggleButton.setImageResource(android.R.drawable.ic_menu_edit);
-            overlaySketchView.setVisibility(View.GONE); // Hide the overlay
+            overlaySketchView.setEnabled(false); // Make the drawing area non-interactive
+            overlaySketchView.setVisibility(View.GONE); // Hide the overlay (optional)
             scrollView.setScrollingEnabled(true); // Enable scrolling
         }
     }
@@ -775,7 +781,7 @@ public class NoteEditorActivity extends Activity {
 
         @Override
         public boolean onTouchEvent(MotionEvent event) {
-            if (!isEnabled()) return false;
+            if (!isEnabled()) return false; // Ignore touch events when disabled
 
             float x = event.getX();
             float y = event.getY();
