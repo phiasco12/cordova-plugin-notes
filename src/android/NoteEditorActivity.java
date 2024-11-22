@@ -294,13 +294,15 @@ public class NoteEditorActivity extends Activity {
 package com.example.notesplugin;
 
 import android.app.Activity;
+import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Paint;
 import android.graphics.Path;
-import android.graphics.drawable.ColorDrawable;
+import android.graphics.PorterDuff;
+import android.graphics.PorterDuffColorFilter;
+import android.graphics.drawable.Drawable;
 import android.os.Bundle;
 import android.text.Layout;
-import android.text.TextUtils;
 import android.view.Gravity;
 import android.view.MotionEvent;
 import android.view.View;
@@ -312,6 +314,9 @@ import android.widget.LinearLayout;
 import android.widget.ScrollView;
 
 import androidx.annotation.NonNull;
+import androidx.appcompat.content.res.AppCompatResources;
+
+import java.lang.reflect.Field;
 
 public class NoteEditorActivity extends Activity {
 
@@ -471,7 +476,7 @@ public class NoteEditorActivity extends Activity {
         newText.setGravity(Gravity.TOP);
         newText.setHorizontallyScrolling(false); // Disable horizontal scrolling
         newText.setSingleLine(false);
-        newText.setCursorDrawableColor(Color.RED); // Change cursor color to red
+        setCursorDrawableColor(newText, Color.RED); // Change cursor color to red
         contentContainer.addView(newText);
     }
 
@@ -488,7 +493,7 @@ public class NoteEditorActivity extends Activity {
         newText.setGravity(Gravity.TOP);
         newText.setHorizontallyScrolling(false); // Disable horizontal scrolling
         newText.setSingleLine(false);
-        newText.setCursorDrawableColor(Color.RED); // Change cursor color to red
+        setCursorDrawableColor(newText, Color.RED); // Change cursor color to red
         contentContainer.addView(newText);
         scrollView.post(() -> scrollView.smoothScrollTo(0, y)); // Scroll to the new text field
     }
@@ -496,20 +501,97 @@ public class NoteEditorActivity extends Activity {
     // Utility method to set the cursor color
     private static void setCursorDrawableColor(EditText editText, int color) {
         try {
-            java.lang.reflect.Field f = TextView.class.getDeclaredField("mCursorDrawableRes");
-            f.setAccessible(true);
-            int drawableResId = f.getInt(editText);
-            Drawable drawable = AppCompatResources.getDrawable(editText.getContext(), drawableResId);
-            drawable.setColorFilter(new PorterDuffColorFilter(color, PorterDuff.Mode.SRC_IN));
-            Drawable[] drawables = {drawable, drawable};
-            f = TextView.class.getDeclaredField("mEditor");
-            f.setAccessible(true);
-            Object editor = f.get(editText);
-            Field editorDrawableField = editor.getClass().getDeclaredField("mCursorDrawable");
-            editorDrawableField.setAccessible(true);
-            editorDrawableField.set(editor, drawables);
+            Field cursorDrawableRes = TextView.class.getDeclaredField("mCursorDrawableRes");
+            cursorDrawableRes.setAccessible(true);
+            int drawableResId = cursorDrawableRes.getInt(editText);
+
+            Drawable cursorDrawable = AppCompatResources.getDrawable(editText.getContext(), drawableResId);
+            if (cursorDrawable != null) {
+                cursorDrawable.setColorFilter(new PorterDuffColorFilter(color, PorterDuff.Mode.SRC_IN));
+                Drawable[] drawables = {cursorDrawable, cursorDrawable};
+
+                Field editorField = TextView.class.getDeclaredField("mEditor");
+                editorField.setAccessible(true);
+                Object editor = editorField.get(editText);
+
+                Field cursorField = editor.getClass().getDeclaredField("mCursorDrawable");
+                cursorField.setAccessible(true);
+                cursorField.set(editor, drawables);
+            }
         } catch (Exception e) {
             e.printStackTrace();
+        }
+    }
+
+    // Custom ScrollView to enable or disable scrolling
+    private static class CustomScrollView extends ScrollView {
+
+        private boolean isScrollable = true;
+
+        public CustomScrollView(Activity context) {
+            super(context);
+        }
+
+        public void setScrollingEnabled(boolean enabled) {
+            isScrollable = enabled;
+        }
+
+        @Override
+        public boolean onTouchEvent(MotionEvent ev) {
+            return isScrollable && super.onTouchEvent(ev);
+        }
+
+        @Override
+        public boolean onInterceptTouchEvent(MotionEvent ev) {
+            return isScrollable && super.onInterceptTouchEvent(ev);
+        }
+    }
+
+    // Custom View for the Sketch Area
+    private static class ResizableSketchView extends View {
+
+        private final Paint paint;
+        private final Path path;
+
+        public ResizableSketchView(@NonNull Activity context) {
+            super(context);
+
+            paint = new Paint();
+            paint.setColor(Color.BLACK);
+            paint.setStyle(Paint.Style.STROKE);
+            paint.setStrokeWidth(8);
+            paint.setAntiAlias(true);
+            paint.setStrokeCap(Paint.Cap.ROUND);
+
+            path = new Path();
+        }
+
+        @Override
+        protected void onDraw(Canvas canvas) {
+            super.onDraw(canvas);
+            canvas.drawPath(path, paint);
+        }
+
+        @Override
+        public boolean onTouchEvent(MotionEvent event) {
+            if (!isEnabled()) return false; // Ignore touch events when disabled
+
+            float x = event.getX();
+            float y = event.getY();
+
+            switch (event.getAction()) {
+                case MotionEvent.ACTION_DOWN:
+                    path.moveTo(x, y);
+                    break;
+                case MotionEvent.ACTION_MOVE:
+                    path.lineTo(x, y);
+                    break;
+                case MotionEvent.ACTION_UP:
+                    break;
+            }
+
+            invalidate(); // Redraw the view
+            return true;
         }
     }
 }
