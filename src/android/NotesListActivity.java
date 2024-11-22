@@ -172,9 +172,12 @@ import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.drawable.GradientDrawable;
 import android.os.Bundle;
+import android.view.Gravity;
 import android.view.ViewGroup;
+import android.widget.Button;
 import android.widget.GridLayout;
 import android.widget.ImageView;
+import android.widget.LinearLayout;
 
 import java.io.File;
 import java.io.FileInputStream;
@@ -192,15 +195,14 @@ public class NotesListActivity extends Activity {
         super.onCreate(savedInstanceState);
 
         // Main layout
-        GridLayout mainLayout = new GridLayout(this);
-        mainLayout.setColumnCount(1); // Single column for the create note button
+        LinearLayout mainLayout = new LinearLayout(this);
+        mainLayout.setOrientation(LinearLayout.VERTICAL);
 
-
-
-                // Create note button
+        // Create note button
         Button createNoteButton = new Button(this);
         createNoteButton.setText("Create Note");
-        createNoteButton.setOnClickListener(v -> openNoteEditor());
+        createNoteButton.setGravity(Gravity.CENTER);
+        createNoteButton.setOnClickListener(v -> openNoteEditor(null));
         mainLayout.addView(createNoteButton);
 
         // Notes grid layout
@@ -221,9 +223,6 @@ public class NotesListActivity extends Activity {
         // Set the layout as the content view
         setContentView(mainLayout);
     }
-
-
-
 
     // Open the NoteEditorActivity
     private void openNoteEditor(String noteFileName) {
