@@ -633,7 +633,7 @@ public class NoteEditorActivity extends Activity {
     private ResizableSketchView overlaySketchView;
     private boolean isDrawingMode = false;
     private TextView pageIndicator;
-    private int pageHeight; // Height of each page
+    private int pageHeight; // Fixed height for each page
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -646,7 +646,7 @@ public class NoteEditorActivity extends Activity {
                 ViewGroup.LayoutParams.MATCH_PARENT
         ));
 
-        // LinearLayout for holding content
+        // LinearLayout for holding pages
         contentContainer = new LinearLayout(this);
         contentContainer.setOrientation(LinearLayout.VERTICAL);
         contentContainer.setPadding(0, 0, 0, 0);
@@ -735,6 +735,25 @@ public class NoteEditorActivity extends Activity {
         }
     }
 
+    private void addNewPage() {
+        // Create a new page container
+        LinearLayout newPage = new LinearLayout(this);
+        newPage.setOrientation(LinearLayout.VERTICAL);
+        LinearLayout.LayoutParams pageParams = new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                pageHeight
+        );
+        pageParams.setMargins(20, 20, 20, 20); // Add margins between pages
+        newPage.setLayoutParams(pageParams);
+        newPage.setPadding(30, 30, 30, 30);
+        newPage.setBackground(createPageBackground());
+
+        contentContainer.addView(newPage);
+
+        // Add an initial text field to the page
+        addNewTextField(newPage);
+    }
+
     private void addNewTextField(LinearLayout page) {
         EditText newText = new EditText(this);
         newText.setLayoutParams(new LinearLayout.LayoutParams(
@@ -752,23 +771,6 @@ public class NoteEditorActivity extends Activity {
         page.addView(newText);
     }
 
-    private void addNewPage() {
-        // Create a new page container
-        LinearLayout newPage = new LinearLayout(this);
-        newPage.setOrientation(LinearLayout.VERTICAL);
-        newPage.setLayoutParams(new LinearLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT,
-                pageHeight - 20 // Add some space between pages
-        ));
-        newPage.setPadding(30, 30, 30, 30);
-        newPage.setBackground(createPageBackground());
-
-        contentContainer.addView(newPage);
-
-        // Add an initial text field to the page
-        addNewTextField(newPage);
-    }
-
     private GradientDrawable createPageBackground() {
         GradientDrawable background = new GradientDrawable();
         background.setColor(Color.WHITE); // Set the background color
@@ -784,8 +786,8 @@ public class NoteEditorActivity extends Activity {
             int contentHeight = contentContainer.getHeight(); // Total content height
 
             // Calculate total pages and current page
-            int totalPages = (int) Math.ceil((double) contentHeight / viewHeight);
-            int currentPage = (int) Math.ceil((double) (scrollY + viewHeight) / viewHeight);
+            int totalPages = contentContainer.getChildCount();
+            int currentPage = (int) Math.ceil((double) scrollY / pageHeight) + 1;
 
             // Update the page indicator
             pageIndicator.setText(currentPage + " / " + totalPages);
@@ -864,4 +866,3 @@ public class NoteEditorActivity extends Activity {
         }
     }
 }
-
