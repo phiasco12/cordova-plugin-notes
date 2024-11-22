@@ -317,32 +317,37 @@ public class NoteEditorActivity extends Activity {
     private ScrollView scrollView; // Main scrollable container
     private FrameLayout mainLayout; // Main layout to overlay cursor
 
-    @Override
-    protected void onCreate(Bundle savedInstanceState) {
-        super.onCreate(savedInstanceState);
+@Override
+protected void onCreate(Bundle savedInstanceState) {
+    super.onCreate(savedInstanceState);
 
-        // Initialize the ScrollView
-        scrollView = new ScrollView(this);
-        scrollView.setLayoutParams(new ViewGroup.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT,
-                ViewGroup.LayoutParams.MATCH_PARENT
-        ));
+    // Initialize the main layout
+    mainLayout = new FrameLayout(this);
 
-        // LinearLayout for holding content
-        contentContainer = new LinearLayout(this);
-        contentContainer.setOrientation(LinearLayout.VERTICAL);
-        contentContainer.setPadding(20, 20, 20, 20); // Add padding around the content
-        contentContainer.setOnTouchListener((v, event) -> handleTouch(event)); // Detect touch
-        scrollView.addView(contentContainer);
+    // Initialize the ScrollView
+    scrollView = new ScrollView(this);
+    scrollView.setLayoutParams(new ViewGroup.LayoutParams(
+            ViewGroup.LayoutParams.MATCH_PARENT,
+            ViewGroup.LayoutParams.MATCH_PARENT
+    ));
 
-        // Add a toolbar for toggling modes
-        createToolbar();
+    // LinearLayout for holding content
+    contentContainer = new LinearLayout(this);
+    contentContainer.setOrientation(LinearLayout.VERTICAL);
+    contentContainer.setPadding(20, 20, 20, 20); // Add padding around the content
+    contentContainer.setOnTouchListener((v, event) -> handleTouch(event)); // Detect touch
+    scrollView.addView(contentContainer);
 
-        // Set up the main layout
-        mainLayout = new FrameLayout(this);
-        mainLayout.addView(scrollView);
-        setContentView(mainLayout);
-    }
+    // Add the ScrollView to the main layout
+    mainLayout.addView(scrollView);
+
+    // Create the toolbar and add it to the main layout
+    createToolbar();
+
+    // Set the main layout as the content view
+    setContentView(mainLayout);
+}
+
 
     private boolean handleTouch(MotionEvent event) {
         if (event.getAction() == MotionEvent.ACTION_DOWN) {
