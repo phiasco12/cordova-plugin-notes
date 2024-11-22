@@ -163,8 +163,8 @@ public class NotesListActivity extends Activity {
 
 
 
-
-package com.example.notesplugin;
+/// working code here///
+/*package com.example.notesplugin;
 
 import android.app.Activity;
 import android.content.Intent;
@@ -245,21 +245,21 @@ public class NotesListActivity extends Activity {
     }
 
     // Load all saved notes from storage
-    /*private void loadSavedNotes() {
-        savedNotes = new ArrayList<>();
-        File notesDir = new File(getFilesDir(), NOTES_DIR);
-        if (!notesDir.exists()) {
-            notesDir.mkdirs();
-        }
+    //private void loadSavedNotes() {
+       // savedNotes = new ArrayList<>();
+       // File notesDir = new File(getFilesDir(), NOTES_DIR);
+        //if (!notesDir.exists()) {
+           // notesDir.mkdirs();
+       // }
 
-        File[] files = notesDir.listFiles();
-        if (files != null) {
-            for (File file : files) {
-                savedNotes.add(file.getName());
-                loadNoteToGrid(file.getName());
-            }
-        }
-    }*/
+        //File[] files = notesDir.listFiles();
+        //if (files != null) {
+            //for (File file : files) {
+                //savedNotes.add(file.getName());
+                //loadNoteToGrid(file.getName());
+            //}
+       // }
+    //}
 
 
     // Load all saved notes from storage
@@ -317,4 +317,4 @@ private void loadSavedNotes() {
             }
         }
     }
-}
+}*/
