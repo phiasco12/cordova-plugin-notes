@@ -709,7 +709,7 @@ public class NoteEditorActivity extends Activity {
     }
 
     private class Page {
-        private final LinearLayout pageLayout; // Page container
+        private final FrameLayout pageLayout; // Page container (frame to overlay text and drawing)
         private final EditText editText; // Text input for the page
         private final ResizableSketchView sketchView; // Sketch area for the page
         private boolean isDrawingMode = false; // Track text/drawing mode
@@ -717,20 +717,21 @@ public class NoteEditorActivity extends Activity {
 
         public Page(Activity context, int width, int height) {
             // Create the page layout
-            pageLayout = new LinearLayout(context);
-            pageLayout.setOrientation(LinearLayout.VERTICAL);
-            LinearLayout.LayoutParams pageParams = new LinearLayout.LayoutParams(
+            pageLayout = new FrameLayout(context);
+            FrameLayout.LayoutParams pageParams = new FrameLayout.LayoutParams(
                     width,
                     height
             );
             pageParams.setMargins(20, 20, 20, 20); // Margins between pages
             pageLayout.setLayoutParams(pageParams);
-            pageLayout.setPadding(30, 30, 30, 30); // Padding inside the page
-            pageLayout.setBackground(createPageBackground());
+
+            // Background with rounded corners
+            GradientDrawable pageBackground = createPageBackground();
+            pageLayout.setBackground(pageBackground);
 
             // Create the EditText for typing
             editText = new EditText(context);
-            editText.setLayoutParams(new LinearLayout.LayoutParams(
+            editText.setLayoutParams(new FrameLayout.LayoutParams(
                     ViewGroup.LayoutParams.MATCH_PARENT,
                     ViewGroup.LayoutParams.MATCH_PARENT
             ));
@@ -771,14 +772,13 @@ public class NoteEditorActivity extends Activity {
                     ViewGroup.LayoutParams.MATCH_PARENT
             ));
             sketchView.setBackgroundColor(Color.TRANSPARENT);
-            sketchView.setVisibility(View.GONE); // Initially hidden
 
-            // Add components to the page layout
+            // Add EditText and SketchView to the page layout (SketchView overlays EditText)
             pageLayout.addView(editText);
             pageLayout.addView(sketchView);
         }
 
-        public LinearLayout getPageLayout() {
+        public FrameLayout getPageLayout() {
             return pageLayout;
         }
 
@@ -786,13 +786,10 @@ public class NoteEditorActivity extends Activity {
             isDrawingMode = !isDrawingMode;
             if (isDrawingMode) {
                 toggleButton.setImageResource(android.R.drawable.ic_menu_view);
-                sketchView.setVisibility(View.VISIBLE);
                 sketchView.setClickable(true); // Enable drawing
-                editText.setVisibility(View.GONE);
             } else {
                 toggleButton.setImageResource(android.R.drawable.ic_menu_edit);
                 sketchView.setClickable(false); // Make sketch click-through
-                editText.setVisibility(View.VISIBLE);
             }
             return isDrawingMode; // Return the current mode
         }
@@ -880,7 +877,6 @@ public class NoteEditorActivity extends Activity {
         }
     }
 
-    // Custom ScrollView with toggleable scrolling
     private static class CustomScrollView extends ScrollView {
         private boolean isScrollingEnabled = true;
 
