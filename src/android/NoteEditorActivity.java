@@ -612,9 +612,9 @@ import android.graphics.Paint;
 import android.graphics.Path;
 import android.graphics.drawable.GradientDrawable;
 import android.os.Bundle;
+import android.text.Editable;
 import android.text.Layout;
 import android.text.TextWatcher;
-import android.text.Editable;
 import android.view.Gravity;
 import android.view.MotionEvent;
 import android.view.View;
@@ -674,6 +674,7 @@ public class NoteEditorActivity extends Activity {
         private final EditText editText; // Text input for the page
         private final ResizableSketchView sketchView; // Sketch area for the page
         private boolean isDrawingMode = false; // Track text/drawing mode
+        private boolean isTextWatcherActive = true; // Prevent feedback loop in TextWatcher
 
         public Page(Activity context, int width, int height) {
             // Create the page layout
@@ -712,6 +713,7 @@ public class NoteEditorActivity extends Activity {
 
                 @Override
                 public void afterTextChanged(Editable s) {
+                    if (!isTextWatcherActive) return; // Avoid feedback loop
                     editText.post(() -> checkForOverflow());
                 }
             });
@@ -757,6 +759,9 @@ public class NoteEditorActivity extends Activity {
         private void checkForOverflow() {
             Layout layout = editText.getLayout();
             if (layout != null && layout.getHeight() > editText.getHeight()) {
+                // Disable the TextWatcher temporarily
+                isTextWatcherActive = false;
+
                 // If the text exceeds the current page, create a new page
                 String overflowText = editText.getText().toString();
                 int lastVisibleLine = layout.getLineForVertical(editText.getHeight());
@@ -771,6 +776,12 @@ public class NoteEditorActivity extends Activity {
                 Page newPage = new Page(NoteEditorActivity.this, pageWidth, pageHeight);
                 newPage.editText.setText(remainingText);
                 pagesContainer.addView(newPage.getPageLayout());
+
+                // Set focus on the new page's EditText
+                newPage.editText.requestFocus();
+
+                // Re-enable the TextWatcher
+                isTextWatcherActive = true;
             }
         }
 
@@ -818,8 +829,6 @@ public class NoteEditorActivity extends Activity {
                     break;
                 case MotionEvent.ACTION_MOVE:
                     path.lineTo(x, y);
-                    break;
-                case MotionEvent.ACTION_UP:
                     break;
             }
 
