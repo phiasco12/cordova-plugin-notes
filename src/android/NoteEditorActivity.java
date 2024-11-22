@@ -610,7 +610,8 @@ import android.graphics.Color;
 import android.graphics.Paint;
 import android.graphics.Path;
 import android.os.Bundle;
-import android.text.Layout;
+import android.text.Editable;
+import android.text.TextWatcher;
 import android.view.Gravity;
 import android.view.MotionEvent;
 import android.view.View;
@@ -628,7 +629,7 @@ public class NoteEditorActivity extends Activity {
     private LinearLayout contentContainer;
     private CustomScrollView scrollView;
     private boolean isDrawingMode = false;
-    private View lastFocusedView; // Tracks the last focused view
+    private EditText lastEditedTextField; // Track the last text field where typing occurred
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -662,17 +663,17 @@ public class NoteEditorActivity extends Activity {
         toolbarParams.gravity = Gravity.BOTTOM;
         toolbar.setLayoutParams(toolbarParams);
 
-        // Toggle button for switching modes
-        ImageButton toggleDrawButton = new ImageButton(this);
-        toggleDrawButton.setImageResource(android.R.drawable.ic_menu_edit);
-        toggleDrawButton.setBackgroundColor(Color.LTGRAY);
-        toggleDrawButton.setLayoutParams(new LinearLayout.LayoutParams(
+        // Toggle button for adding a drawing area
+        ImageButton addDrawingAreaButton = new ImageButton(this);
+        addDrawingAreaButton.setImageResource(android.R.drawable.ic_menu_edit);
+        addDrawingAreaButton.setBackgroundColor(Color.LTGRAY);
+        addDrawingAreaButton.setLayoutParams(new LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.WRAP_CONTENT,
                 LinearLayout.LayoutParams.MATCH_PARENT
         ));
-        toggleDrawButton.setOnClickListener(v -> toggleDrawingMode(toggleDrawButton));
+        addDrawingAreaButton.setOnClickListener(v -> addDrawingAreaAfterLastText());
 
-        toolbar.addView(toggleDrawButton);
+        toolbar.addView(addDrawingAreaButton);
 
         // Main layout to hold the toolbar and content
         FrameLayout mainLayout = new FrameLayout(this);
@@ -680,18 +681,6 @@ public class NoteEditorActivity extends Activity {
         mainLayout.addView(toolbar);
 
         setContentView(mainLayout);
-    }
-
-    private void toggleDrawingMode(ImageButton toggleButton) {
-        isDrawingMode = !isDrawingMode;
-
-        if (isDrawingMode) {
-            toggleButton.setImageResource(android.R.drawable.ic_menu_view);
-            scrollView.setScrollingEnabled(false);
-        } else {
-            toggleButton.setImageResource(android.R.drawable.ic_menu_edit);
-            scrollView.setScrollingEnabled(true);
-        }
     }
 
     private void addNewTextField() {
@@ -708,53 +697,50 @@ public class NoteEditorActivity extends Activity {
         newText.setHorizontallyScrolling(false);
         newText.setSingleLine(false);
 
-        // Track focus changes
-        newText.setOnFocusChangeListener((v, hasFocus) -> {
-            if (hasFocus) {
-                lastFocusedView = v;
-            }
-        });
+        // Update the reference to the last edited text field whenever typing occurs
+        newText.addTextChangedListener(new TextWatcher() {
+            @Override
+            public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
 
-        newText.setOnClickListener(v -> {
-            if (isDrawingMode) {
-                addNewDrawingAreaBelow((View) v);
+            @Override
+            public void onTextChanged(CharSequence s, int start, int before, int count) {
+                lastEditedTextField = newText;
             }
+
+            @Override
+            public void afterTextChanged(Editable s) {}
         });
 
         contentContainer.addView(newText);
-        lastFocusedView = newText; // Track the last added text field
+        lastEditedTextField = newText; // Track the last added text field
     }
 
-    private void addNewDrawingArea() {
-        // Add a new drawing area below the last focused view or at the end
-        if (lastFocusedView != null) {
-            addNewDrawingAreaBelow(lastFocusedView);
+    private void addDrawingAreaAfterLastText() {
+        if (lastEditedTextField != null) {
+            // Find the position of the last edited text field
+            int index = contentContainer.indexOfChild(lastEditedTextField);
+
+            if (index != -1) {
+                // Add a drawing area immediately after the last edited text field
+                ResizableSketchView sketchView = new ResizableSketchView(this);
+                sketchView.setLayoutParams(new LinearLayout.LayoutParams(
+                        ViewGroup.LayoutParams.MATCH_PARENT,
+                        500 // Fixed height for drawing areas
+                ));
+                sketchView.setBackgroundColor(Color.LTGRAY);
+
+                contentContainer.addView(sketchView, index + 1);
+            }
         } else {
-            addNewDrawingAreaAtEnd();
-        }
-    }
-
-    private void addNewDrawingAreaBelow(View view) {
-        int index = contentContainer.indexOfChild(view);
-        if (index != -1) {
+            // If no text field has been edited yet, add a drawing area at the bottom
             ResizableSketchView sketchView = new ResizableSketchView(this);
             sketchView.setLayoutParams(new LinearLayout.LayoutParams(
                     ViewGroup.LayoutParams.MATCH_PARENT,
-                    500 // Fixed height for drawing areas
+                    500
             ));
             sketchView.setBackgroundColor(Color.LTGRAY);
-            contentContainer.addView(sketchView, index + 1);
+            contentContainer.addView(sketchView);
         }
-    }
-
-    private void addNewDrawingAreaAtEnd() {
-        ResizableSketchView sketchView = new ResizableSketchView(this);
-        sketchView.setLayoutParams(new LinearLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT,
-                500
-        ));
-        sketchView.setBackgroundColor(Color.LTGRAY);
-        contentContainer.addView(sketchView);
     }
 
     // Custom ScrollView to enable or disable scrolling
