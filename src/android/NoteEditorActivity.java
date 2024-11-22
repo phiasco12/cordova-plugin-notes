@@ -702,55 +702,49 @@ public class NoteEditorActivity extends Activity {
         setContentView(mainLayout);
     }
 
-    private boolean handleTouch(MotionEvent event) {
-        if (event.getAction() == MotionEvent.ACTION_DOWN && !isDrawingMode) {
-            float x = event.getX();
-            float y = event.getY();
-            addNewTextFieldAtPosition(x, y); // Add a new text field at the clicked position
-            return true;
-        }
-        return false;
+private boolean handleTouch(MotionEvent event) {
+    if (event.getAction() == MotionEvent.ACTION_DOWN && !isDrawingMode) {
+        float x = event.getX();
+        float y = event.getY();
+        addNewTextFieldAtExactPosition(x, y); // Add a new text field at the clicked position
+        return true;
     }
+    return false;
+}
 
-    private void addNewTextFieldAtPosition(float x, float y) {
-        // Create a new EditText
-        EditText newText = new EditText(this);
-        newText.setLayoutParams(new LinearLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT,
-                ViewGroup.LayoutParams.WRAP_CONTENT
-        ));
-        newText.setBackgroundColor(Color.TRANSPARENT);
-        newText.setTextColor(Color.BLACK);
-        newText.setTextSize(16);
-        newText.setPadding(10, 10, 10, 10);
-        newText.setGravity(Gravity.TOP);
-        newText.setHorizontallyScrolling(false); // Disable horizontal scrolling
-        newText.setSingleLine(false);
-        setCursorDrawableColor(newText, Color.RED); // Change cursor color to red
+private void addNewTextFieldAtExactPosition(float x, float y) {
+    // Create a new EditText
+    EditText newText = new EditText(this);
+    newText.setLayoutParams(new FrameLayout.LayoutParams(
+            ViewGroup.LayoutParams.MATCH_PARENT,
+            ViewGroup.LayoutParams.WRAP_CONTENT
+    ));
+    newText.setBackgroundColor(Color.TRANSPARENT);
+    newText.setTextColor(Color.BLACK);
+    newText.setTextSize(16);
+    newText.setPadding(10, 10, 10, 10);
+    newText.setGravity(Gravity.TOP);
+    newText.setHorizontallyScrolling(false); // Disable horizontal scrolling
+    newText.setSingleLine(false);
+    setCursorDrawableColor(newText, Color.RED); // Change cursor color to red
 
-        // Add the new EditText to the container
-        contentContainer.addView(newText);
+    // Add the EditText to the content container at the calculated position
+    FrameLayout.LayoutParams params = new FrameLayout.LayoutParams(
+            ViewGroup.LayoutParams.MATCH_PARENT,
+            ViewGroup.LayoutParams.WRAP_CONTENT
+    );
+    params.topMargin = (int) y; // Set the vertical position
+    newText.setLayoutParams(params);
 
-        // Focus the new EditText and set the cursor
-        newText.requestFocus();
+    mainLayout.addView(newText); // Add to the main layout
 
-        // Use a post layout action to adjust the position
-        newText.post(() -> {
-            int[] location = new int[2];
-            newText.getLocationOnScreen(location);
-            int offsetY = (int) (y - location[1]);
+    // Focus the new EditText and ensure visibility
+    newText.requestFocus();
 
-            Layout layout = newText.getLayout();
-            if (layout != null && offsetY > 0 && offsetY < newText.getHeight()) {
-                int line = layout.getLineForVertical(offsetY);
-                int offset = layout.getOffsetForHorizontal(line, x);
-                newText.setSelection(offset);
-            }
+    // Scroll to the new EditText to ensure it's visible
+    scrollView.post(() -> scrollView.smoothScrollTo(0, newText.getTop()));
+}
 
-            // Scroll to ensure the new text field is visible
-            scrollView.smoothScrollTo(0, newText.getTop());
-        });
-    }
 
     private void toggleDrawingMode(ImageButton toggleButton) {
         isDrawingMode = !isDrawingMode; // Toggle mode
