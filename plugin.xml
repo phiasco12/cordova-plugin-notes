@@ -33,6 +33,9 @@
         <activity android:name="com.example.notesplugin.NoteEditorActivity"
                   android:exported="true"
                   android:label="Note Editor" />
+        <activity android:name="com.example.notesplugin.NoteEditActivity"
+                  android:exported="true"
+                  android:label="Note Edit" />
     </config-file>
 
 
