@@ -1368,65 +1368,62 @@ import android.widget.ScrollView;
 
 import androidx.annotation.NonNull;
 
-import org.json.JSONArray;
-import org.json.JSONObject;
-
 import java.io.File;
-import java.io.FileInputStream;
 import java.io.FileOutputStream;
-import java.util.ArrayList;
+import java.io.FileInputStream;
+import java.io.ByteArrayOutputStream;
 
 public class NoteEditorActivity extends Activity {
 
-    private LinearLayout pagesContainer;
-    private CustomScrollView scrollView;
-    private LinearLayout bottomToolbar;
-    private int pageHeight;
-    private int pageWidth;
-    private Page activePage;
+    private LinearLayout pagesContainer; // The container for all pages
+    private CustomScrollView scrollView; // Custom ScrollView to toggle scrolling
+    private LinearLayout bottomToolbar; // Bottom toolbar for buttons
+    private int pageHeight; // Fixed height for each page
+    private int pageWidth; // Fixed width for each page
+    private Page activePage; // Track the currently active page
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
+        // Initialize the CustomScrollView
         scrollView = new CustomScrollView(this);
         scrollView.setLayoutParams(new FrameLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT,
                 ViewGroup.LayoutParams.MATCH_PARENT
         ));
 
+        // Initialize the pages container
         pagesContainer = new LinearLayout(this);
         pagesContainer.setOrientation(LinearLayout.VERTICAL);
-        pagesContainer.setPadding(20, 20, 20, 20);
+        pagesContainer.setPadding(20, 20, 20, 20); // Padding between the container edges and pages
         scrollView.addView(pagesContainer);
 
+        // Dynamically calculate page dimensions based on screen size
         scrollView.getViewTreeObserver().addOnGlobalLayoutListener(() -> {
             if (pageHeight == 0 || pageWidth == 0) {
-                pageHeight = scrollView.getHeight() - 150;
-                pageWidth = scrollView.getWidth() - 80;
-
-                String noteFileName = getIntent().getStringExtra("noteFileName");
-                if (noteFileName != null) {
-                    loadExistingNote(noteFileName);
-                } else {
-                    addNewPage();
-                }
+                pageHeight = scrollView.getHeight() - 150; // Account for toolbar height
+                pageWidth = scrollView.getWidth() - 80; // Screen width minus padding/margin
+                addNewPage(); // Add the first page
             }
         });
 
+        // Create the bottom toolbar
         setupBottomToolbar();
 
+        // Main layout
         FrameLayout mainLayout = new FrameLayout(this);
         mainLayout.addView(scrollView);
-        mainLayout.addView(bottomToolbar);
+        mainLayout.addView(bottomToolbar); // Add toolbar to the main layout
 
         setContentView(mainLayout);
     }
 
     private void addNewPage() {
+        // Create a new page
         Page page = new Page(this, pageWidth, pageHeight);
         pagesContainer.addView(page.getPageLayout());
-        activePage = page;
+        activePage = page; // Set the first page as active
     }
 
     private void setupBottomToolbar() {
@@ -1438,17 +1435,19 @@ public class NoteEditorActivity extends Activity {
 
         FrameLayout.LayoutParams toolbarParams = new FrameLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT,
-                150
+                150 // Fixed height for the toolbar
         );
         toolbarParams.gravity = Gravity.BOTTOM;
         bottomToolbar.setLayoutParams(toolbarParams);
 
+        // Add the toggle button for sketch/typing mode
         ImageButton toggleButton = new ImageButton(this);
         toggleButton.setImageResource(android.R.drawable.ic_menu_edit);
         toggleButton.setBackgroundColor(Color.LTGRAY);
         toggleButton.setOnClickListener(v -> toggleDrawingMode(toggleButton));
         bottomToolbar.addView(toggleButton);
 
+        // Add the save button to save and return the note
         ImageButton saveButton = new ImageButton(this);
         saveButton.setImageResource(android.R.drawable.ic_menu_save);
         saveButton.setBackgroundColor(Color.LTGRAY);
@@ -1459,7 +1458,7 @@ public class NoteEditorActivity extends Activity {
     private void toggleDrawingMode(ImageButton toggleButton) {
         if (activePage != null) {
             boolean isDrawingMode = activePage.toggleDrawingMode(toggleButton);
-            scrollView.setScrollingEnabled(!isDrawingMode);
+            scrollView.setScrollingEnabled(!isDrawingMode); // Disable scrolling in drawing mode
             if (isDrawingMode) {
                 hideKeyboard();
             }
@@ -1474,111 +1473,234 @@ public class NoteEditorActivity extends Activity {
         }
     }
 
-    private void saveAndReturn() {
+    /*private void saveAndReturn() {
         if (pagesContainer.getChildCount() > 0) {
+            // Capture only the first page
             View firstPage = pagesContainer.getChildAt(0);
             Bitmap firstPageBitmap = createBitmapFromView(firstPage);
 
-            String noteFileName = getIntent().getStringExtra("noteFileName");
-            if (noteFileName == null) {
-                noteFileName = "note_" + System.currentTimeMillis();
-            }
-
-            File notesDir = new File(getFilesDir(), "saved_notes");
-            if (!notesDir.exists()) {
-                notesDir.mkdirs();
-            }
-
-            File bitmapFile = new File(notesDir, noteFileName + ".png");
-            try (FileOutputStream fos = new FileOutputStream(bitmapFile)) {
-                firstPageBitmap.compress(Bitmap.CompressFormat.PNG, 100, fos);
-            } catch (Exception e) {
-                e.printStackTrace();
-            }
-
-            File jsonFile = new File(notesDir, noteFileName + ".json");
-            try (FileOutputStream fos = new FileOutputStream(jsonFile)) {
-                String noteDataJson = serializeNoteData();
-                fos.write(noteDataJson.getBytes());
-            } catch (Exception e) {
-                e.printStackTrace();
-            }
+            // Compress the bitmap and send it back
+            ByteArrayOutputStream stream = new ByteArrayOutputStream();
+            firstPageBitmap.compress(Bitmap.CompressFormat.PNG, 100, stream);
+            byte[] byteArray = stream.toByteArray();
 
             Intent resultIntent = new Intent();
-            resultIntent.putExtra("noteFileName", noteFileName);
+            resultIntent.putExtra("noteImage", byteArray);
             setResult(RESULT_OK, resultIntent);
-            finish();
+            finish(); // Close the NoteEditorActivity
         }
-    }
+    }*/
 
-    private String serializeNoteData() {
-        try {
-            JSONObject noteJson = new JSONObject();
-            JSONArray pagesArray = new JSONArray();
 
-            for (int i = 0; i < pagesContainer.getChildCount(); i++) {
-                View pageView = pagesContainer.getChildAt(i);
-                if (pageView instanceof FrameLayout) {
-                    FrameLayout pageLayout = (FrameLayout) pageView;
-                    EditText editText = (EditText) pageLayout.getChildAt(0);
-                    ResizableSketchView sketchView = (ResizableSketchView) pageLayout.getChildAt(1);
 
-                    JSONObject pageJson = new JSONObject();
-                    pageJson.put("text", editText.getText().toString());
-                    pageJson.put("drawingPath", sketchView.getPathData());
-                    pagesArray.put(pageJson);
-                }
-            }
+    private void saveAndReturn() {
+    if (pagesContainer.getChildCount() > 0) {
+        // Capture only the first page
+        View firstPage = pagesContainer.getChildAt(0);
+        Bitmap firstPageBitmap = createBitmapFromView(firstPage);
 
-            noteJson.put("pages", pagesArray);
-            return noteJson.toString();
-        } catch (Exception e) {
-            e.printStackTrace();
-            return "{}";
+        // Save the bitmap to a file
+        String noteFileName = getIntent().getStringExtra("noteFileName");
+        if (noteFileName == null) {
+            noteFileName = "note_" + System.currentTimeMillis() + ".png"; // Generate unique filename
         }
-    }
 
-    private void loadExistingNote(String noteFileName) {
-        File jsonFile = new File(getFilesDir(), "saved_notes/" + noteFileName + ".json");
-        if (jsonFile.exists()) {
-            try (FileInputStream fis = new FileInputStream(jsonFile)) {
-                byte[] buffer = new byte[(int) jsonFile.length()];
-                fis.read(buffer);
-                String jsonData = new String(buffer);
-                deserializeNoteData(jsonData);
-            } catch (Exception e) {
-                e.printStackTrace();
-            }
-        } else {
-            addNewPage();
+        File notesDir = new File(getFilesDir(), "saved_notes");
+        if (!notesDir.exists()) {
+            notesDir.mkdirs();
         }
-    }
 
-    private void deserializeNoteData(String jsonData) {
-        try {
-            JSONObject noteJson = new JSONObject(jsonData);
-            JSONArray pagesArray = noteJson.getJSONArray("pages");
-
-            for (int i = 0; i < pagesArray.length(); i++) {
-                JSONObject pageJson = pagesArray.getJSONObject(i);
-                String text = pageJson.getString("text");
-                String drawingPath = pageJson.getString("drawingPath");
-
-                Page page = new Page(this, pageWidth, pageHeight);
-                page.getEditText().setText(text);
-                page.getSketchView().loadPathData(drawingPath);
-                pagesContainer.addView(page.getPageLayout());
-            }
+        File noteFile = new File(notesDir, noteFileName);
+        try (FileOutputStream fos = new FileOutputStream(noteFile)) {
+            firstPageBitmap.compress(Bitmap.CompressFormat.PNG, 100, fos);
         } catch (Exception e) {
             e.printStackTrace();
         }
+
+        // Return the saved note filename
+        Intent resultIntent = new Intent();
+        resultIntent.putExtra("noteFileName", noteFileName);
+        setResult(RESULT_OK, resultIntent);
+        finish(); // Close the NoteEditorActivity
     }
+}
+
 
     private Bitmap createBitmapFromView(View view) {
+        // Create a bitmap for the view's dimensions
         Bitmap bitmap = Bitmap.createBitmap(view.getWidth(), view.getHeight(), Bitmap.Config.ARGB_8888);
         Canvas canvas = new Canvas(bitmap);
-        view.draw(canvas);
+        view.draw(canvas); // Render the view onto the canvas
         return bitmap;
+    }
+
+    private class Page {
+        private final FrameLayout pageLayout; // Page container (frame to overlay text and drawing)
+        private final EditText editText; // Text input for the page
+        private final ResizableSketchView sketchView; // Sketch area for the page
+        private boolean isDrawingMode = false; // Track text/drawing mode
+        private boolean isTextWatcherActive = true; // Prevent feedback loop in TextWatcher
+
+        public Page(Activity context, int width, int height) {
+            // Create the page layout
+            pageLayout = new FrameLayout(context);
+            FrameLayout.LayoutParams pageParams = new FrameLayout.LayoutParams(
+                    width,
+                    height
+            );
+            pageParams.setMargins(20, 20, 20, 20); // Margins between pages
+            pageLayout.setLayoutParams(pageParams);
+
+            // Background with rounded corners
+            GradientDrawable pageBackground = createPageBackground();
+            pageLayout.setBackground(pageBackground);
+
+            // Create the EditText for typing
+            editText = new EditText(context);
+            editText.setLayoutParams(new FrameLayout.LayoutParams(
+                    ViewGroup.LayoutParams.MATCH_PARENT,
+                    ViewGroup.LayoutParams.MATCH_PARENT
+            ));
+            editText.setBackgroundColor(Color.TRANSPARENT);
+            editText.setTextColor(Color.BLACK);
+            editText.setTextSize(16);
+            editText.setPadding(10, 10, 10, 10);
+            editText.setGravity(Gravity.TOP);
+            editText.setHorizontallyScrolling(false);
+            editText.setSingleLine(false);
+
+            // Set focus listener to track the active page
+            editText.setOnFocusChangeListener((v, hasFocus) -> {
+                if (hasFocus) {
+                    activePage = this;
+                }
+            });
+
+            // Monitor text changes to handle overflow and create new pages
+            editText.addTextChangedListener(new TextWatcher() {
+                @Override
+                public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
+
+                @Override
+                public void onTextChanged(CharSequence s, int start, int before, int count) {}
+
+                @Override
+                public void afterTextChanged(Editable s) {
+                    if (!isTextWatcherActive) return; // Avoid feedback loop
+                    editText.post(() -> checkForOverflow());
+                }
+            });
+
+            // Create the sketch view for drawing
+            sketchView = new ResizableSketchView(context, width, height);
+            sketchView.setLayoutParams(new FrameLayout.LayoutParams(
+                    ViewGroup.LayoutParams.MATCH_PARENT,
+                    ViewGroup.LayoutParams.MATCH_PARENT
+            ));
+            sketchView.setBackgroundColor(Color.TRANSPARENT);
+
+            // Add EditText and SketchView to the page layout (SketchView overlays EditText)
+            pageLayout.addView(editText);
+            pageLayout.addView(sketchView);
+        }
+
+        public FrameLayout getPageLayout() {
+            return pageLayout;
+        }
+
+        public boolean toggleDrawingMode(ImageButton toggleButton) {
+            isDrawingMode = !isDrawingMode;
+            if (isDrawingMode) {
+                toggleButton.setImageResource(android.R.drawable.ic_menu_view);
+                sketchView.setClickable(true); // Enable drawing
+            } else {
+                toggleButton.setImageResource(android.R.drawable.ic_menu_edit);
+                sketchView.setClickable(false); // Make sketch click-through
+            }
+            return isDrawingMode; // Return the current mode
+        }
+
+        private void checkForOverflow() {
+            Layout layout = editText.getLayout();
+            if (layout != null && layout.getHeight() > editText.getHeight()) {
+                // Disable the TextWatcher temporarily
+                isTextWatcherActive = false;
+
+                // If the text exceeds the current page, create a new page
+                String overflowText = editText.getText().toString();
+                int lastVisibleLine = layout.getLineForVertical(editText.getHeight());
+                int overflowStart = layout.getLineStart(lastVisibleLine);
+                String visibleText = overflowText.substring(0, overflowStart);
+                String remainingText = overflowText.substring(overflowStart);
+
+                // Update the current page with visible text
+                editText.setText(visibleText);
+
+                // Create a new page and set the remaining text
+                Page newPage = new Page(NoteEditorActivity.this, pageWidth, pageHeight);
+                newPage.editText.setText(remainingText);
+                pagesContainer.addView(newPage.getPageLayout());
+
+                // Set focus on the new page's EditText
+                newPage.editText.requestFocus();
+
+                // Re-enable the TextWatcher
+                isTextWatcherActive = true;
+            }
+        }
+
+        private GradientDrawable createPageBackground() {
+            GradientDrawable background = new GradientDrawable();
+            background.setColor(Color.WHITE); // Set the page background color
+            background.setCornerRadius(30); // Rounded corners
+            background.setStroke(5, Color.LTGRAY); // Add a border
+            return background;
+        }
+    }
+
+    private static class ResizableSketchView extends View {
+
+        private final Paint paint;
+        private final Path path;
+
+        public ResizableSketchView(@NonNull Activity context, int width, int height) {
+            super(context);
+
+            paint = new Paint();
+            paint.setColor(Color.BLUE);
+            paint.setStyle(Paint.Style.STROKE);
+            paint.setStrokeWidth(8);
+            paint.setAntiAlias(true);
+            paint.setStrokeCap(Paint.Cap.ROUND);
+
+            path = new Path();
+        }
+
+        @Override
+        protected void onDraw(Canvas canvas) {
+            super.onDraw(canvas);
+            canvas.drawPath(path, paint);
+        }
+
+        @Override
+        public boolean onTouchEvent(MotionEvent event) {
+            if (!isClickable()) return false; // Make the sketch click-through in typing mode
+
+            float x = event.getX();
+            float y = event.getY();
+
+            switch (event.getAction()) {
+                case MotionEvent.ACTION_DOWN:
+                    path.moveTo(x, y);
+                    break;
+                case MotionEvent.ACTION_MOVE:
+                    path.lineTo(x, y);
+                    break;
+            }
+
+            invalidate(); // Redraw the view
+            return true;
+        }
     }
 
     private static class CustomScrollView extends ScrollView {
@@ -1600,142 +1722,6 @@ public class NoteEditorActivity extends Activity {
         @Override
         public boolean onInterceptTouchEvent(MotionEvent ev) {
             return isScrollingEnabled && super.onInterceptTouchEvent(ev);
-        }
-    }
-
-    private static class PathSegment {
-        float startX, startY, endX, endY;
-
-        public PathSegment(float startX, float startY, float endX, float endY) {
-            this.startX = startX;
-            this.startY = startY;
-            this.endX = endX;
-            this.endY = endY;
-        }
-    }
-
-    private class Page {
-        private final FrameLayout pageLayout;
-        private final EditText editText;
-        private final ResizableSketchView sketchView;
-
-        public Page(Activity context, int width, int height) {
-            pageLayout = new FrameLayout(context);
-            pageLayout.setLayoutParams(new FrameLayout.LayoutParams(width, height));
-
-            GradientDrawable pageBackground = new GradientDrawable();
-            pageBackground.setColor(Color.WHITE);
-            pageBackground.setCornerRadius(30);
-            pageBackground.setStroke(5, Color.LTGRAY);
-            pageLayout.setBackground(pageBackground);
-
-            editText = new EditText(context);
-            editText.setLayoutParams(new FrameLayout.LayoutParams(
-                    ViewGroup.LayoutParams.MATCH_PARENT,
-                    ViewGroup.LayoutParams.MATCH_PARENT
-            ));
-            editText.setBackgroundColor(Color.TRANSPARENT);
-            pageLayout.addView(editText);
-
-            sketchView = new ResizableSketchView(context, width, height);
-            sketchView.setLayoutParams(new FrameLayout.LayoutParams(
-                    ViewGroup.LayoutParams.MATCH_PARENT,
-                    ViewGroup.LayoutParams.MATCH_PARENT
-            ));
-            sketchView.setBackgroundColor(Color.TRANSPARENT);
-            pageLayout.addView(sketchView);
-        }
-
-        public FrameLayout getPageLayout() {
-            return pageLayout;
-        }
-
-        public EditText getEditText() {
-            return editText;
-        }
-
-        public ResizableSketchView getSketchView() {
-            return sketchView;
-        }
-
-        public boolean toggleDrawingMode(ImageButton toggleButton) {
-            boolean isDrawing = sketchView.isClickable();
-            sketchView.setClickable(!isDrawing);
-            toggleButton.setImageResource(isDrawing ? android.R.drawable.ic_menu_edit : android.R.drawable.ic_menu_view);
-            return !isDrawing;
-        }
-    }
-
-    private static class ResizableSketchView extends View {
-        private final Paint paint;
-        private final Path path;
-        private final ArrayList<PathSegment> pathSegments;
-
-        public ResizableSketchView(Activity context, int width, int height) {
-            super(context);
-            paint = new Paint();
-            paint.setColor(Color.BLUE);
-            paint.setStyle(Paint.Style.STROKE);
-            paint.setStrokeWidth(8);
-            paint.setAntiAlias(true);
-
-            path = new Path();
-            pathSegments = new ArrayList<>();
-        }
-
-        @Override
-        protected void onDraw(Canvas canvas) {
-            super.onDraw(canvas);
-            canvas.drawPath(path, paint);
-        }
-
-        @Override
-        public boolean onTouchEvent(MotionEvent event) {
-            float x = event.getX();
-            float y = event.getY();
-            if (event.getAction() == MotionEvent.ACTION_DOWN) {
-                path.moveTo(x, y);
-            } else if (event.getAction() == MotionEvent.ACTION_MOVE) {
-                path.lineTo(x, y);
-                pathSegments.add(new PathSegment(x, y, x, y));
-            }
-            invalidate();
-            return true;
-        }
-
-        public String getPathData() {
-            JSONArray pathArray = new JSONArray();
-            for (PathSegment segment : pathSegments) {
-                JSONObject segmentJson = new JSONObject();
-                try {
-                    segmentJson.put("startX", segment.startX);
-                    segmentJson.put("startY", segment.startY);
-                    segmentJson.put("endX", segment.endX);
-                    segmentJson.put("endY", segment.endY);
-                } catch (Exception e) {
-                    e.printStackTrace();
-                }
-                pathArray.put(segmentJson);
-            }
-            return pathArray.toString();
-        }
-
-        public void loadPathData(String pathData) {
-            try {
-                JSONArray pathArray = new JSONArray(pathData);
-                for (int i = 0; i < pathArray.length(); i++) {
-                    JSONObject segmentJson = pathArray.getJSONObject(i);
-                    float startX = (float) segmentJson.getDouble("startX");
-                    float startY = (float) segmentJson.getDouble("startY");
-                    float endX = (float) segmentJson.getDouble("endX");
-                    float endY = (float) segmentJson.getDouble("endY");
-                    path.moveTo(startX, startY);
-                    path.lineTo(endX, endY);
-                }
-                invalidate();
-            } catch (Exception e) {
-                e.printStackTrace();
-            }
         }
     }
 }
