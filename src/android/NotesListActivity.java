@@ -363,7 +363,7 @@ public class NotesListActivity extends Activity {
         Button createNoteButton = new Button(this);
         createNoteButton.setText("Create Note");
         createNoteButton.setGravity(Gravity.CENTER);
-        createNoteButton.setOnClickListener(v -> openNoteEditor(null));
+        createNoteButton.setOnClickListener(v -> openNoteCreator());
         mainLayout.addView(createNoteButton);
 
         // Notes grid layout
@@ -385,23 +385,25 @@ public class NotesListActivity extends Activity {
         setContentView(mainLayout);
     }
 
-    // Open the NoteEditActivity
+    // Open the NoteEditorActivity for creating a new note
+    private void openNoteCreator() {
+        Intent intent = new Intent(NotesListActivity.this, NoteEditorActivity.class);
+        startActivityForResult(intent, 1); // Result used to refresh the list after creation
+    }
+
+    // Open the NoteEditActivity for editing a saved note
     private void openNoteEditor(String noteFileName) {
         Intent intent = new Intent(NotesListActivity.this, NoteEditActivity.class);
-        if (noteFileName != null) {
-            intent.putExtra("noteFileName", noteFileName); // Pass the note file to edit
-        }
-        startActivityForResult(intent, 1);
+        intent.putExtra("noteFileName", noteFileName); // Pass the note file to edit
+        startActivity(intent);
     }
 
     // Handle saved notes
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         if (requestCode == 1 && resultCode == RESULT_OK) {
-            String noteFileName = data.getStringExtra("noteFileName");
-            if (noteFileName != null) {
-                loadNoteToGrid(noteFileName);
-            }
+            // Reload the grid to show the newly created note
+            loadSavedNotes();
         }
     }
 
@@ -459,4 +461,3 @@ public class NotesListActivity extends Activity {
         }
     }
 }
-
