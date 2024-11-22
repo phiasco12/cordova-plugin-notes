@@ -601,7 +601,6 @@ public class NoteEditorActivity extends Activity {
 
 
 
-
 package com.example.notesplugin;
 
 import android.app.Activity;
