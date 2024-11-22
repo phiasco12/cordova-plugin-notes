@@ -598,3 +598,201 @@ public class NoteEditorActivity extends Activity {
         }
     }
 }*/
+
+
+
+
+
+package com.example.notesplugin;
+
+import android.app.Activity;
+import android.graphics.Canvas;
+import android.graphics.Color;
+import android.graphics.Paint;
+import android.graphics.Path;
+import android.graphics.drawable.GradientDrawable;
+import android.os.Bundle;
+import android.view.Gravity;
+import android.view.MotionEvent;
+import android.view.View;
+import android.view.ViewGroup;
+import android.widget.EditText;
+import android.widget.FrameLayout;
+import android.widget.ImageButton;
+import android.widget.LinearLayout;
+import android.widget.ScrollView;
+
+import androidx.annotation.NonNull;
+
+import java.util.ArrayList;
+import java.util.List;
+
+public class NoteEditorActivity extends Activity {
+
+    private LinearLayout contentContainer;
+    private ScrollView scrollView;
+    private List<Page> pages = new ArrayList<>(); // Track all pages
+    private int pageHeight; // Fixed height for each page, dynamically calculated
+
+    @Override
+    protected void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+
+        // Initialize the ScrollView
+        scrollView = new ScrollView(this);
+        scrollView.setLayoutParams(new ViewGroup.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.MATCH_PARENT
+        ));
+
+        // LinearLayout for holding all pages
+        contentContainer = new LinearLayout(this);
+        contentContainer.setOrientation(LinearLayout.VERTICAL);
+        contentContainer.setPadding(0, 0, 0, 0);
+        scrollView.addView(contentContainer);
+
+        // Determine the height of a page dynamically
+        scrollView.getViewTreeObserver().addOnGlobalLayoutListener(() -> {
+            if (pageHeight == 0) {
+                pageHeight = scrollView.getHeight(); // Height of the visible area
+                addNewPage(); // Add the first page
+            }
+        });
+
+        // Set the ScrollView as the main content view
+        setContentView(scrollView);
+    }
+
+    private void addNewPage() {
+        // Create a new page
+        Page newPage = new Page(this, pageHeight);
+        pages.add(newPage);
+        contentContainer.addView(newPage.getPageLayout());
+    }
+
+    private class Page {
+        private final LinearLayout pageLayout; // The container layout for the page
+        private final EditText editText; // Text input area
+        private final ResizableSketchView sketchView; // Sketch area
+        private boolean isDrawingMode = false;
+
+        public Page(Activity context, int pageHeight) {
+            // Create the page layout
+            pageLayout = new LinearLayout(context);
+            pageLayout.setOrientation(LinearLayout.VERTICAL);
+            LinearLayout.LayoutParams pageParams = new LinearLayout.LayoutParams(
+                    ViewGroup.LayoutParams.MATCH_PARENT,
+                    pageHeight
+            );
+            pageParams.setMargins(20, 20, 20, 20); // Add margins between pages
+            pageLayout.setLayoutParams(pageParams);
+            pageLayout.setPadding(30, 30, 30, 30);
+            pageLayout.setBackground(createPageBackground());
+
+            // Create the EditText for typing
+            editText = new EditText(context);
+            editText.setLayoutParams(new LinearLayout.LayoutParams(
+                    ViewGroup.LayoutParams.MATCH_PARENT,
+                    ViewGroup.LayoutParams.WRAP_CONTENT
+            ));
+            editText.setBackgroundColor(Color.TRANSPARENT);
+            editText.setTextColor(Color.BLACK);
+            editText.setTextSize(16);
+            editText.setPadding(10, 10, 10, 10);
+            editText.setGravity(Gravity.TOP);
+            editText.setHorizontallyScrolling(false);
+            editText.setSingleLine(false);
+
+            // Create the sketch view for drawing
+            sketchView = new ResizableSketchView(context);
+            sketchView.setLayoutParams(new FrameLayout.LayoutParams(
+                    ViewGroup.LayoutParams.MATCH_PARENT,
+                    ViewGroup.LayoutParams.MATCH_PARENT
+            ));
+            sketchView.setBackgroundColor(Color.TRANSPARENT);
+            sketchView.setVisibility(View.GONE); // Initially hidden
+
+            // Add a toggle button for switching between text and drawing modes
+            ImageButton toggleButton = new ImageButton(context);
+            toggleButton.setImageResource(android.R.drawable.ic_menu_edit);
+            toggleButton.setBackgroundColor(Color.LTGRAY);
+            toggleButton.setOnClickListener(v -> toggleDrawingMode(toggleButton));
+
+            // Add components to the page layout
+            pageLayout.addView(editText);
+            pageLayout.addView(toggleButton);
+            pageLayout.addView(sketchView);
+        }
+
+        public LinearLayout getPageLayout() {
+            return pageLayout;
+        }
+
+        public void toggleDrawingMode(ImageButton toggleButton) {
+            isDrawingMode = !isDrawingMode;
+            if (isDrawingMode) {
+                toggleButton.setImageResource(android.R.drawable.ic_menu_view);
+                sketchView.setVisibility(View.VISIBLE);
+                editText.setVisibility(View.GONE);
+            } else {
+                toggleButton.setImageResource(android.R.drawable.ic_menu_edit);
+                sketchView.setVisibility(View.GONE);
+                editText.setVisibility(View.VISIBLE);
+            }
+        }
+
+        private GradientDrawable createPageBackground() {
+            GradientDrawable background = new GradientDrawable();
+            background.setColor(Color.WHITE); // White page background
+            background.setCornerRadius(30); // Rounded corners
+            background.setStroke(5, Color.LTGRAY); // Border with light gray color
+            return background;
+        }
+    }
+
+    private static class ResizableSketchView extends View {
+
+        private final Paint paint;
+        private final Path path;
+
+        public ResizableSketchView(@NonNull Activity context) {
+            super(context);
+
+            paint = new Paint();
+            paint.setColor(Color.BLACK);
+            paint.setStyle(Paint.Style.STROKE);
+            paint.setStrokeWidth(8);
+            paint.setAntiAlias(true);
+            paint.setStrokeCap(Paint.Cap.ROUND);
+
+            path = new Path();
+        }
+
+        @Override
+        protected void onDraw(Canvas canvas) {
+            super.onDraw(canvas);
+            canvas.drawPath(path, paint);
+        }
+
+        @Override
+        public boolean onTouchEvent(MotionEvent event) {
+            float x = event.getX();
+            float y = event.getY();
+
+            switch (event.getAction()) {
+                case MotionEvent.ACTION_DOWN:
+                    path.moveTo(x, y);
+                    break;
+                case MotionEvent.ACTION_MOVE:
+                    path.lineTo(x, y);
+                    break;
+                case MotionEvent.ACTION_UP:
+                    break;
+            }
+
+            invalidate(); // Redraw the view
+            return true;
+        }
+    }
+}
+
