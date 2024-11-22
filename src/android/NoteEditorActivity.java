@@ -1060,7 +1060,7 @@ public class NoteEditorActivity extends Activity {
         }
     }
 
-    private void saveAndReturn() {
+    /*private void saveAndReturn() {
         if (pagesContainer.getChildCount() > 0) {
             // Capture only the first page
             View firstPage = pagesContainer.getChildAt(0);
@@ -1076,7 +1076,42 @@ public class NoteEditorActivity extends Activity {
             setResult(RESULT_OK, resultIntent);
             finish(); // Close the NoteEditorActivity
         }
+    }*/
+
+
+
+    private void saveAndReturn() {
+    if (pagesContainer.getChildCount() > 0) {
+        // Capture only the first page
+        View firstPage = pagesContainer.getChildAt(0);
+        Bitmap firstPageBitmap = createBitmapFromView(firstPage);
+
+        // Save the bitmap to a file
+        String noteFileName = getIntent().getStringExtra("noteFileName");
+        if (noteFileName == null) {
+            noteFileName = "note_" + System.currentTimeMillis() + ".png"; // Generate unique filename
+        }
+
+        File notesDir = new File(getFilesDir(), "saved_notes");
+        if (!notesDir.exists()) {
+            notesDir.mkdirs();
+        }
+
+        File noteFile = new File(notesDir, noteFileName);
+        try (FileOutputStream fos = new FileOutputStream(noteFile)) {
+            firstPageBitmap.compress(Bitmap.CompressFormat.PNG, 100, fos);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+
+        // Return the saved note filename
+        Intent resultIntent = new Intent();
+        resultIntent.putExtra("noteFileName", noteFileName);
+        setResult(RESULT_OK, resultIntent);
+        finish(); // Close the NoteEditorActivity
     }
+}
+
 
     private Bitmap createBitmapFromView(View view) {
         // Create a bitmap for the view's dimensions
