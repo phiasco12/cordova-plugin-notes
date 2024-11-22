@@ -677,7 +677,7 @@ public class NoteEditorActivity extends Activity {
         FrameLayout mainLayout = new FrameLayout(this);
         mainLayout.addView(scrollView);
 
-        // Create the overlay sketch view but keep it hidden initially
+        // Create the overlay sketch view
         overlaySketchView = new ResizableSketchView(this);
         FrameLayout.LayoutParams overlayParams = new FrameLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT,
@@ -686,7 +686,7 @@ public class NoteEditorActivity extends Activity {
         overlayParams.setMargins(0, 0, 0, 150); // Leave space for the toolbar
         overlaySketchView.setLayoutParams(overlayParams);
         overlaySketchView.setBackgroundColor(Color.TRANSPARENT); // Fully transparent background
-        overlaySketchView.setVisibility(View.GONE); // Hide it initially
+        overlaySketchView.setEnabled(false); // Initially non-interactive (click-through)
         mainLayout.addView(overlaySketchView);
 
         // Add the toolbar last so it stays on top
@@ -701,14 +701,12 @@ public class NoteEditorActivity extends Activity {
         if (isDrawingMode) {
             // Switch to drawing mode
             toggleButton.setImageResource(android.R.drawable.ic_menu_view);
-            overlaySketchView.setVisibility(View.VISIBLE); // Show the overlay for drawing
             overlaySketchView.setEnabled(true); // Enable interaction with the drawing area
             scrollView.setScrollingEnabled(false); // Disable scrolling
         } else {
             // Switch back to typing mode
             toggleButton.setImageResource(android.R.drawable.ic_menu_edit);
             overlaySketchView.setEnabled(false); // Make the drawing area non-interactive
-            overlaySketchView.setVisibility(View.GONE); // Hide the overlay (optional)
             scrollView.setScrollingEnabled(true); // Enable scrolling
         }
     }
