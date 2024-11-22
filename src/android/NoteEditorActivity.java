@@ -610,8 +610,6 @@ import android.graphics.Color;
 import android.graphics.Paint;
 import android.graphics.Path;
 import android.os.Bundle;
-import android.text.Editable;
-import android.text.TextWatcher;
 import android.view.Gravity;
 import android.view.MotionEvent;
 import android.view.View;
@@ -628,8 +626,8 @@ public class NoteEditorActivity extends Activity {
 
     private LinearLayout contentContainer;
     private CustomScrollView scrollView;
+    private ResizableSketchView overlaySketchView; // The transparent overlay for drawing
     private boolean isDrawingMode = false;
-    private EditText lastEditedTextField; // Track the last text field where typing occurred
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -663,24 +661,50 @@ public class NoteEditorActivity extends Activity {
         toolbarParams.gravity = Gravity.BOTTOM;
         toolbar.setLayoutParams(toolbarParams);
 
-        // Toggle button for adding a drawing area
-        ImageButton addDrawingAreaButton = new ImageButton(this);
-        addDrawingAreaButton.setImageResource(android.R.drawable.ic_menu_edit);
-        addDrawingAreaButton.setBackgroundColor(Color.LTGRAY);
-        addDrawingAreaButton.setLayoutParams(new LinearLayout.LayoutParams(
+        // Toggle button for switching modes
+        ImageButton toggleDrawButton = new ImageButton(this);
+        toggleDrawButton.setImageResource(android.R.drawable.ic_menu_edit);
+        toggleDrawButton.setBackgroundColor(Color.LTGRAY);
+        toggleDrawButton.setLayoutParams(new LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.WRAP_CONTENT,
                 LinearLayout.LayoutParams.MATCH_PARENT
         ));
-        addDrawingAreaButton.setOnClickListener(v -> addDrawingAreaAfterLastText());
+        toggleDrawButton.setOnClickListener(v -> toggleDrawingMode(toggleDrawButton));
 
-        toolbar.addView(addDrawingAreaButton);
+        toolbar.addView(toggleDrawButton);
 
         // Main layout to hold the toolbar and content
         FrameLayout mainLayout = new FrameLayout(this);
         mainLayout.addView(scrollView);
         mainLayout.addView(toolbar);
 
+        // Create the overlay sketch view but keep it hidden initially
+        overlaySketchView = new ResizableSketchView(this);
+        overlaySketchView.setLayoutParams(new FrameLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.MATCH_PARENT
+        ));
+        overlaySketchView.setBackgroundColor(Color.TRANSPARENT); // Fully transparent background
+        overlaySketchView.setVisibility(View.GONE); // Hide it initially
+        mainLayout.addView(overlaySketchView);
+
         setContentView(mainLayout);
+    }
+
+    private void toggleDrawingMode(ImageButton toggleButton) {
+        isDrawingMode = !isDrawingMode;
+
+        if (isDrawingMode) {
+            // Switch to drawing mode
+            toggleButton.setImageResource(android.R.drawable.ic_menu_view);
+            overlaySketchView.setVisibility(View.VISIBLE); // Show the overlay for drawing
+            scrollView.setScrollingEnabled(false); // Disable scrolling
+        } else {
+            // Switch back to typing mode
+            toggleButton.setImageResource(android.R.drawable.ic_menu_edit);
+            overlaySketchView.setVisibility(View.GONE); // Hide the overlay
+            scrollView.setScrollingEnabled(true); // Enable scrolling
+        }
     }
 
     private void addNewTextField() {
@@ -697,50 +721,7 @@ public class NoteEditorActivity extends Activity {
         newText.setHorizontallyScrolling(false);
         newText.setSingleLine(false);
 
-        // Update the reference to the last edited text field whenever typing occurs
-        newText.addTextChangedListener(new TextWatcher() {
-            @Override
-            public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
-
-            @Override
-            public void onTextChanged(CharSequence s, int start, int before, int count) {
-                lastEditedTextField = newText;
-            }
-
-            @Override
-            public void afterTextChanged(Editable s) {}
-        });
-
         contentContainer.addView(newText);
-        lastEditedTextField = newText; // Track the last added text field
-    }
-
-    private void addDrawingAreaAfterLastText() {
-        if (lastEditedTextField != null) {
-            // Find the position of the last edited text field
-            int index = contentContainer.indexOfChild(lastEditedTextField);
-
-            if (index != -1) {
-                // Add a drawing area immediately after the last edited text field
-                ResizableSketchView sketchView = new ResizableSketchView(this);
-                sketchView.setLayoutParams(new LinearLayout.LayoutParams(
-                        ViewGroup.LayoutParams.MATCH_PARENT,
-                        500 // Fixed height for drawing areas
-                ));
-                sketchView.setBackgroundColor(Color.LTGRAY);
-
-                contentContainer.addView(sketchView, index + 1);
-            }
-        } else {
-            // If no text field has been edited yet, add a drawing area at the bottom
-            ResizableSketchView sketchView = new ResizableSketchView(this);
-            sketchView.setLayoutParams(new LinearLayout.LayoutParams(
-                    ViewGroup.LayoutParams.MATCH_PARENT,
-                    500
-            ));
-            sketchView.setBackgroundColor(Color.LTGRAY);
-            contentContainer.addView(sketchView);
-        }
     }
 
     // Custom ScrollView to enable or disable scrolling
@@ -810,7 +791,7 @@ public class NoteEditorActivity extends Activity {
                     break;
             }
 
-            invalidate();
+            invalidate(); // Redraw the view
             return true;
         }
     }
