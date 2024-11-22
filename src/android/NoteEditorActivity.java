@@ -942,9 +942,9 @@ import android.graphics.Paint;
 import android.graphics.Path;
 import android.graphics.drawable.GradientDrawable;
 import android.os.Bundle;
+import android.text.Editable;
 import android.text.Layout;
 import android.text.TextWatcher;
-import android.text.Editable;
 import android.view.Gravity;
 import android.view.MotionEvent;
 import android.view.View;
@@ -1061,34 +1061,28 @@ public class NoteEditorActivity extends Activity {
     }
 
     private void saveAndReturn() {
-        // Create a bitmap representing the entire notes content
-        Bitmap fullBitmap = createNotesBitmap();
-        ByteArrayOutputStream stream = new ByteArrayOutputStream();
-        fullBitmap.compress(Bitmap.CompressFormat.PNG, 100, stream);
-        byte[] byteArray = stream.toByteArray();
+        if (pagesContainer.getChildCount() > 0) {
+            // Capture only the first page
+            View firstPage = pagesContainer.getChildAt(0);
+            Bitmap firstPageBitmap = createBitmapFromView(firstPage);
 
-        // Pass the bitmap back to NotesListActivity
-        Intent resultIntent = new Intent();
-        resultIntent.putExtra("noteImage", byteArray);
-        setResult(RESULT_OK, resultIntent);
-        finish(); // Close the NoteEditorActivity
+            // Compress the bitmap and send it back
+            ByteArrayOutputStream stream = new ByteArrayOutputStream();
+            firstPageBitmap.compress(Bitmap.CompressFormat.PNG, 100, stream);
+            byte[] byteArray = stream.toByteArray();
+
+            Intent resultIntent = new Intent();
+            resultIntent.putExtra("noteImage", byteArray);
+            setResult(RESULT_OK, resultIntent);
+            finish(); // Close the NoteEditorActivity
+        }
     }
 
-    private Bitmap createNotesBitmap() {
-        // Measure the full height of the notes content
-        int totalHeight = pagesContainer.getChildCount() * pageHeight;
-        int totalWidth = pageWidth;
-
-        // Create a bitmap large enough to hold all pages
-        Bitmap bitmap = Bitmap.createBitmap(totalWidth, totalHeight, Bitmap.Config.ARGB_8888);
+    private Bitmap createBitmapFromView(View view) {
+        // Create a bitmap for the view's dimensions
+        Bitmap bitmap = Bitmap.createBitmap(view.getWidth(), view.getHeight(), Bitmap.Config.ARGB_8888);
         Canvas canvas = new Canvas(bitmap);
-
-        // Draw each page onto the canvas
-        for (int i = 0; i < pagesContainer.getChildCount(); i++) {
-            View pageView = pagesContainer.getChildAt(i);
-            pageView.layout(0, i * pageHeight, pageWidth, (i + 1) * pageHeight);
-            pageView.draw(canvas);
-        }
+        view.draw(canvas); // Render the view onto the canvas
         return bitmap;
     }
 
@@ -1097,6 +1091,7 @@ public class NoteEditorActivity extends Activity {
         private final EditText editText; // Text input for the page
         private final ResizableSketchView sketchView; // Sketch area for the page
         private boolean isDrawingMode = false; // Track text/drawing mode
+        private boolean isTextWatcherActive = true; // Prevent feedback loop in TextWatcher
 
         public Page(Activity context, int width, int height) {
             // Create the page layout
@@ -1126,7 +1121,14 @@ public class NoteEditorActivity extends Activity {
             editText.setHorizontallyScrolling(false);
             editText.setSingleLine(false);
 
-            // Monitor text changes to handle overflow
+            // Set focus listener to track the active page
+            editText.setOnFocusChangeListener((v, hasFocus) -> {
+                if (hasFocus) {
+                    activePage = this;
+                }
+            });
+
+            // Monitor text changes to handle overflow and create new pages
             editText.addTextChangedListener(new TextWatcher() {
                 @Override
                 public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
@@ -1136,19 +1138,20 @@ public class NoteEditorActivity extends Activity {
 
                 @Override
                 public void afterTextChanged(Editable s) {
-                    checkForOverflow();
+                    if (!isTextWatcherActive) return; // Avoid feedback loop
+                    editText.post(() -> checkForOverflow());
                 }
             });
 
             // Create the sketch view for drawing
-            sketchView = new ResizableSketchView(context);
+            sketchView = new ResizableSketchView(context, width, height);
             sketchView.setLayoutParams(new FrameLayout.LayoutParams(
                     ViewGroup.LayoutParams.MATCH_PARENT,
                     ViewGroup.LayoutParams.MATCH_PARENT
             ));
             sketchView.setBackgroundColor(Color.TRANSPARENT);
 
-            // Add EditText and SketchView to the page layout
+            // Add EditText and SketchView to the page layout (SketchView overlays EditText)
             pageLayout.addView(editText);
             pageLayout.addView(sketchView);
         }
@@ -1172,16 +1175,37 @@ public class NoteEditorActivity extends Activity {
         private void checkForOverflow() {
             Layout layout = editText.getLayout();
             if (layout != null && layout.getHeight() > editText.getHeight()) {
-                // Add a new page when the text overflows
-                addNewPage();
+                // Disable the TextWatcher temporarily
+                isTextWatcherActive = false;
+
+                // If the text exceeds the current page, create a new page
+                String overflowText = editText.getText().toString();
+                int lastVisibleLine = layout.getLineForVertical(editText.getHeight());
+                int overflowStart = layout.getLineStart(lastVisibleLine);
+                String visibleText = overflowText.substring(0, overflowStart);
+                String remainingText = overflowText.substring(overflowStart);
+
+                // Update the current page with visible text
+                editText.setText(visibleText);
+
+                // Create a new page and set the remaining text
+                Page newPage = new Page(NoteEditorActivity.this, pageWidth, pageHeight);
+                newPage.editText.setText(remainingText);
+                pagesContainer.addView(newPage.getPageLayout());
+
+                // Set focus on the new page's EditText
+                newPage.editText.requestFocus();
+
+                // Re-enable the TextWatcher
+                isTextWatcherActive = true;
             }
         }
 
         private GradientDrawable createPageBackground() {
             GradientDrawable background = new GradientDrawable();
-            background.setColor(Color.WHITE);
-            background.setCornerRadius(30);
-            background.setStroke(5, Color.LTGRAY);
+            background.setColor(Color.WHITE); // Set the page background color
+            background.setCornerRadius(30); // Rounded corners
+            background.setStroke(5, Color.LTGRAY); // Add a border
             return background;
         }
     }
@@ -1191,7 +1215,7 @@ public class NoteEditorActivity extends Activity {
         private final Paint paint;
         private final Path path;
 
-        public ResizableSketchView(@NonNull Activity context) {
+        public ResizableSketchView(@NonNull Activity context, int width, int height) {
             super(context);
 
             paint = new Paint();
