@@ -316,7 +316,7 @@ import androidx.annotation.NonNull;
 public class NoteEditorActivity extends Activity {
 
     private LinearLayout contentContainer; // Container for all content
-    private ScrollView scrollView; // Main scrollable container
+    private CustomScrollView scrollView; // Custom scrollable container
     private boolean isDrawingMode = false; // Tracks whether drawing mode is active
     private ResizableSketchView sketchView; // Single sketch area
 
@@ -325,7 +325,7 @@ public class NoteEditorActivity extends Activity {
         super.onCreate(savedInstanceState);
 
         // Initialize the ScrollView
-        scrollView = new ScrollView(this);
+        scrollView = new CustomScrollView(this);
         scrollView.setLayoutParams(new ViewGroup.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT,
                 ViewGroup.LayoutParams.MATCH_PARENT
@@ -390,6 +390,7 @@ public class NoteEditorActivity extends Activity {
         if (isDrawingMode) {
             // Switch to drawing mode
             toggleButton.setImageResource(android.R.drawable.ic_menu_view); // Change icon to text
+            scrollView.setScrollingEnabled(false); // Disable scrolling
             for (int i = 0; i < contentContainer.getChildCount(); i++) {
                 View child = contentContainer.getChildAt(i);
                 if (child instanceof EditText) {
@@ -400,6 +401,7 @@ public class NoteEditorActivity extends Activity {
         } else {
             // Switch back to typing mode
             toggleButton.setImageResource(android.R.drawable.ic_menu_edit); // Change icon to draw
+            scrollView.setScrollingEnabled(true); // Enable scrolling
             for (int i = 0; i < contentContainer.getChildCount(); i++) {
                 View child = contentContainer.getChildAt(i);
                 if (child instanceof EditText) {
@@ -420,14 +422,39 @@ public class NoteEditorActivity extends Activity {
         newText.setTextColor(Color.BLACK);
         newText.setTextSize(16);
         newText.setPadding(10, 10, 10, 10);
-        newText.setSingleLine(false);
         newText.setGravity(Gravity.TOP);
+        newText.setHorizontallyScrolling(false); // Disable horizontal scrolling
+        newText.setSingleLine(false);
         contentContainer.addView(newText);
     }
 
     private void addNewTextFieldAtBottom() {
         if (!isDrawingMode) { // Add only when in typing mode
             addNewTextField();
+        }
+    }
+
+    // Custom ScrollView to enable or disable scrolling
+    private static class CustomScrollView extends ScrollView {
+
+        private boolean isScrollable = true;
+
+        public CustomScrollView(Activity context) {
+            super(context);
+        }
+
+        public void setScrollingEnabled(boolean enabled) {
+            isScrollable = enabled;
+        }
+
+        @Override
+        public boolean onTouchEvent(MotionEvent ev) {
+            return isScrollable && super.onTouchEvent(ev);
+        }
+
+        @Override
+        public boolean onInterceptTouchEvent(MotionEvent ev) {
+            return isScrollable && super.onInterceptTouchEvent(ev);
         }
     }
 
