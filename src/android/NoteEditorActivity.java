@@ -630,8 +630,10 @@ public class NoteEditorActivity extends Activity {
 
     private LinearLayout pagesContainer; // The container for all pages
     private ScrollView scrollView; // Scrollable container for the pages
+    private LinearLayout bottomToolbar; // Bottom toolbar for buttons
     private int pageHeight; // Fixed height for each page
     private int pageWidth; // Fixed width for each page
+    private Page activePage; // Track the currently active page
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -639,7 +641,7 @@ public class NoteEditorActivity extends Activity {
 
         // Initialize the ScrollView
         scrollView = new ScrollView(this);
-        scrollView.setLayoutParams(new ViewGroup.LayoutParams(
+        scrollView.setLayoutParams(new FrameLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT,
                 ViewGroup.LayoutParams.MATCH_PARENT
         ));
@@ -653,19 +655,56 @@ public class NoteEditorActivity extends Activity {
         // Dynamically calculate page dimensions based on screen size
         scrollView.getViewTreeObserver().addOnGlobalLayoutListener(() -> {
             if (pageHeight == 0 || pageWidth == 0) {
-                pageHeight = scrollView.getHeight(); // Full visible height of the screen
+                pageHeight = scrollView.getHeight() - 150; // Account for toolbar height
                 pageWidth = scrollView.getWidth() - 80; // Screen width minus padding/margin
                 addNewPage(); // Add the first page
             }
         });
 
-        setContentView(scrollView);
+        // Create the bottom toolbar
+        setupBottomToolbar();
+
+        // Main layout
+        FrameLayout mainLayout = new FrameLayout(this);
+        mainLayout.addView(scrollView);
+        mainLayout.addView(bottomToolbar); // Add toolbar to the main layout
+
+        setContentView(mainLayout);
     }
 
     private void addNewPage() {
         // Create a new page
         Page page = new Page(this, pageWidth, pageHeight);
         pagesContainer.addView(page.getPageLayout());
+        activePage = page; // Set the first page as active
+    }
+
+    private void setupBottomToolbar() {
+        bottomToolbar = new LinearLayout(this);
+        bottomToolbar.setOrientation(LinearLayout.HORIZONTAL);
+        bottomToolbar.setGravity(Gravity.CENTER_VERTICAL);
+        bottomToolbar.setBackgroundColor(Color.DKGRAY);
+        bottomToolbar.setPadding(20, 20, 20, 20);
+
+        FrameLayout.LayoutParams toolbarParams = new FrameLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                150 // Fixed height for the toolbar
+        );
+        toolbarParams.gravity = Gravity.BOTTOM;
+        bottomToolbar.setLayoutParams(toolbarParams);
+
+        // Add the toggle button for sketch/typing mode
+        ImageButton toggleButton = new ImageButton(this);
+        toggleButton.setImageResource(android.R.drawable.ic_menu_edit);
+        toggleButton.setBackgroundColor(Color.LTGRAY);
+        toggleButton.setOnClickListener(v -> toggleDrawingMode(toggleButton));
+        bottomToolbar.addView(toggleButton);
+    }
+
+    private void toggleDrawingMode(ImageButton toggleButton) {
+        if (activePage != null) {
+            activePage.toggleDrawingMode(toggleButton);
+        }
     }
 
     private class Page {
@@ -702,6 +741,13 @@ public class NoteEditorActivity extends Activity {
             editText.setHorizontallyScrolling(false);
             editText.setSingleLine(false);
 
+            // Set focus listener to track the active page
+            editText.setOnFocusChangeListener((v, hasFocus) -> {
+                if (hasFocus) {
+                    activePage = this;
+                }
+            });
+
             // Monitor text changes to handle overflow and create new pages
             editText.addTextChangedListener(new TextWatcher() {
                 @Override
@@ -718,7 +764,7 @@ public class NoteEditorActivity extends Activity {
             });
 
             // Create the sketch view for drawing
-            sketchView = new ResizableSketchView(context);
+            sketchView = new ResizableSketchView(context, width, height);
             sketchView.setLayoutParams(new FrameLayout.LayoutParams(
                     ViewGroup.LayoutParams.MATCH_PARENT,
                     ViewGroup.LayoutParams.MATCH_PARENT
@@ -726,15 +772,8 @@ public class NoteEditorActivity extends Activity {
             sketchView.setBackgroundColor(Color.TRANSPARENT);
             sketchView.setVisibility(View.GONE); // Initially hidden
 
-            // Add a toggle button for switching between text and drawing modes
-            ImageButton toggleButton = new ImageButton(context);
-            toggleButton.setImageResource(android.R.drawable.ic_menu_edit);
-            toggleButton.setBackgroundColor(Color.LTGRAY);
-            toggleButton.setOnClickListener(v -> toggleDrawingMode(toggleButton));
-
             // Add components to the page layout
             pageLayout.addView(editText);
-            pageLayout.addView(toggleButton);
             pageLayout.addView(sketchView);
         }
 
@@ -747,10 +786,11 @@ public class NoteEditorActivity extends Activity {
             if (isDrawingMode) {
                 toggleButton.setImageResource(android.R.drawable.ic_menu_view);
                 sketchView.setVisibility(View.VISIBLE);
+                sketchView.setClickable(true); // Enable drawing
                 editText.setVisibility(View.GONE);
             } else {
                 toggleButton.setImageResource(android.R.drawable.ic_menu_edit);
-                sketchView.setVisibility(View.GONE);
+                sketchView.setClickable(false); // Make sketch click-through
                 editText.setVisibility(View.VISIBLE);
             }
         }
@@ -798,11 +838,11 @@ public class NoteEditorActivity extends Activity {
         private final Paint paint;
         private final Path path;
 
-        public ResizableSketchView(@NonNull Activity context) {
+        public ResizableSketchView(@NonNull Activity context, int width, int height) {
             super(context);
 
             paint = new Paint();
-            paint.setColor(Color.BLACK);
+            paint.setColor(Color.BLUE);
             paint.setStyle(Paint.Style.STROKE);
             paint.setStrokeWidth(8);
             paint.setAntiAlias(true);
@@ -819,6 +859,8 @@ public class NoteEditorActivity extends Activity {
 
         @Override
         public boolean onTouchEvent(MotionEvent event) {
+            if (!isClickable()) return false; // Make the sketch click-through in typing mode
+
             float x = event.getX();
             float y = event.getY();
 
