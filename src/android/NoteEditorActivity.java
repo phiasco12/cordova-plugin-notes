@@ -944,6 +944,7 @@ import android.os.Bundle;
 import android.text.Editable;
 import android.text.Layout;
 import android.text.TextWatcher;
+import android.util.AttributeSet;
 import android.view.Gravity;
 import android.view.MotionEvent;
 import android.view.View;
@@ -959,69 +960,61 @@ import androidx.annotation.NonNull;
 
 import java.io.BufferedReader;
 import java.io.File;
-import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.FileReader;
 import java.io.FileWriter;
 
 public class NoteEditorActivity extends Activity {
 
-    private LinearLayout pagesContainer; // The container for all pages
-    private CustomScrollView scrollView; // Custom ScrollView to toggle scrolling
-    private LinearLayout bottomToolbar; // Bottom toolbar for buttons
-    private int pageHeight; // Fixed height for each page
-    private int pageWidth; // Fixed width for each page
-    private Page activePage; // Track the currently active page
-    private String noteFileName; // The file name of the note being edited
+    private LinearLayout pagesContainer;
+    private CustomScrollView scrollView;
+    private LinearLayout bottomToolbar;
+    private int pageHeight;
+    private int pageWidth;
+    private Page activePage;
+    private String noteFileName;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
-        // Get the file name from the Intent (if editing an existing note)
         noteFileName = getIntent().getStringExtra("noteFileName");
 
-        // Initialize the CustomScrollView
         scrollView = new CustomScrollView(this);
         scrollView.setLayoutParams(new FrameLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT,
                 ViewGroup.LayoutParams.MATCH_PARENT
         ));
 
-        // Initialize the pages container
         pagesContainer = new LinearLayout(this);
         pagesContainer.setOrientation(LinearLayout.VERTICAL);
-        pagesContainer.setPadding(20, 20, 20, 20); // Padding between the container edges and pages
+        pagesContainer.setPadding(20, 20, 20, 20);
         scrollView.addView(pagesContainer);
 
-        // Dynamically calculate page dimensions based on screen size
         scrollView.getViewTreeObserver().addOnGlobalLayoutListener(() -> {
             if (pageHeight == 0 || pageWidth == 0) {
-                pageHeight = scrollView.getHeight() - 150; // Account for toolbar height
-                pageWidth = scrollView.getWidth() - 80; // Screen width minus padding/margin
-                addNewPage(); // Add the first page
+                pageHeight = scrollView.getHeight() - 150;
+                pageWidth = scrollView.getWidth() - 80;
+                addNewPage();
                 if (noteFileName != null) {
-                    loadNote(); // Load the saved note data if editing an existing note
+                    loadNote();
                 }
             }
         });
 
-        // Create the bottom toolbar
         setupBottomToolbar();
 
-        // Main layout
         FrameLayout mainLayout = new FrameLayout(this);
         mainLayout.addView(scrollView);
-        mainLayout.addView(bottomToolbar); // Add toolbar to the main layout
+        mainLayout.addView(bottomToolbar);
 
         setContentView(mainLayout);
     }
 
     private void addNewPage() {
-        // Create a new page
         Page page = new Page(this, pageWidth, pageHeight);
         pagesContainer.addView(page.getPageLayout());
-        activePage = page; // Set the first page as active
+        activePage = page;
     }
 
     private void setupBottomToolbar() {
@@ -1033,19 +1026,17 @@ public class NoteEditorActivity extends Activity {
 
         FrameLayout.LayoutParams toolbarParams = new FrameLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT,
-                150 // Fixed height for the toolbar
+                150
         );
         toolbarParams.gravity = Gravity.BOTTOM;
         bottomToolbar.setLayoutParams(toolbarParams);
 
-        // Add the toggle button for sketch/typing mode
         ImageButton toggleButton = new ImageButton(this);
         toggleButton.setImageResource(android.R.drawable.ic_menu_edit);
         toggleButton.setBackgroundColor(Color.LTGRAY);
         toggleButton.setOnClickListener(v -> toggleDrawingMode(toggleButton));
         bottomToolbar.addView(toggleButton);
 
-        // Add the save button to save and return the note
         ImageButton saveButton = new ImageButton(this);
         saveButton.setImageResource(android.R.drawable.ic_menu_save);
         saveButton.setBackgroundColor(Color.LTGRAY);
@@ -1056,7 +1047,7 @@ public class NoteEditorActivity extends Activity {
     private void toggleDrawingMode(ImageButton toggleButton) {
         if (activePage != null) {
             boolean isDrawingMode = activePage.toggleDrawingMode(toggleButton);
-            scrollView.setScrollingEnabled(!isDrawingMode); // Disable scrolling in drawing mode
+            scrollView.setScrollingEnabled(!isDrawingMode);
             if (isDrawingMode) {
                 hideKeyboard();
             }
@@ -1073,9 +1064,8 @@ public class NoteEditorActivity extends Activity {
 
     private void saveAndReturn() {
         if (pagesContainer.getChildCount() > 0) {
-            // Ensure a file name is assigned
             if (noteFileName == null) {
-                noteFileName = "note_" + System.currentTimeMillis(); // Generate unique base filename
+                noteFileName = "note_" + System.currentTimeMillis();
             }
 
             File notesDir = new File(getFilesDir(), "saved_notes");
@@ -1083,7 +1073,6 @@ public class NoteEditorActivity extends Activity {
                 notesDir.mkdirs();
             }
 
-            // Save the first page as a .png image
             View firstPage = pagesContainer.getChildAt(0);
             Bitmap firstPageBitmap = createBitmapFromView(firstPage);
             File imageFile = new File(notesDir, noteFileName + ".png");
@@ -1093,7 +1082,6 @@ public class NoteEditorActivity extends Activity {
                 e.printStackTrace();
             }
 
-            // Save the full note (text and drawings) as a .txt file
             File noteFile = new File(notesDir, noteFileName + ".txt");
             try (FileWriter writer = new FileWriter(noteFile)) {
                 for (int i = 0; i < pagesContainer.getChildCount(); i++) {
@@ -1105,11 +1093,10 @@ public class NoteEditorActivity extends Activity {
                 e.printStackTrace();
             }
 
-            // Return the saved note filename
             Intent resultIntent = new Intent();
-            resultIntent.putExtra("noteFileName", noteFileName); // Send the base filename
+            resultIntent.putExtra("noteFileName", noteFileName);
             setResult(RESULT_OK, resultIntent);
-            finish(); // Close the NoteEditorActivity
+            finish();
         }
     }
 
@@ -1146,12 +1133,73 @@ public class NoteEditorActivity extends Activity {
         return bitmap;
     }
 
-    private class Page {
-        private final FrameLayout pageLayout; // Page container
-        private final EditText editText; // Text area
-        private final ResizableSketchView sketchView; // Drawing area
+    private static class CustomScrollView extends ScrollView {
+        private boolean isScrollingEnabled = true;
 
-        // Initialize Page (constructor logic omitted for brevity)
+        public CustomScrollView(Activity context) {
+            super(context);
+        }
+
+        public void setScrollingEnabled(boolean enabled) {
+            isScrollingEnabled = enabled;
+        }
+
+        @Override
+        public boolean onTouchEvent(MotionEvent ev) {
+            return isScrollingEnabled && super.onTouchEvent(ev);
+        }
+
+        @Override
+        public boolean onInterceptTouchEvent(MotionEvent ev) {
+            return isScrollingEnabled && super.onInterceptTouchEvent(ev);
+        }
+    }
+
+    private class Page {
+        private final FrameLayout pageLayout;
+        private final EditText editText;
+        private final ResizableSketchView sketchView;
+
+        public Page(Activity context, int width, int height) {
+            pageLayout = new FrameLayout(context);
+            FrameLayout.LayoutParams pageParams = new FrameLayout.LayoutParams(width, height);
+            pageParams.setMargins(20, 20, 20, 20);
+            pageLayout.setLayoutParams(pageParams);
+
+            GradientDrawable pageBackground = new GradientDrawable();
+            pageBackground.setColor(Color.WHITE);
+            pageBackground.setCornerRadius(30);
+            pageBackground.setStroke(5, Color.LTGRAY);
+            pageLayout.setBackground(pageBackground);
+
+            editText = new EditText(context);
+            editText.setLayoutParams(new FrameLayout.LayoutParams(
+                    ViewGroup.LayoutParams.MATCH_PARENT,
+                    ViewGroup.LayoutParams.MATCH_PARENT
+            ));
+            editText.setBackgroundColor(Color.TRANSPARENT);
+            editText.setTextColor(Color.BLACK);
+            editText.setTextSize(16);
+            editText.setPadding(10, 10, 10, 10);
+            editText.setGravity(Gravity.TOP);
+            editText.setHorizontallyScrolling(false);
+            editText.setSingleLine(false);
+
+            sketchView = new ResizableSketchView(context);
+            sketchView.setLayoutParams(new FrameLayout.LayoutParams(
+                    ViewGroup.LayoutParams.MATCH_PARENT,
+                    ViewGroup.LayoutParams.MATCH_PARENT
+            ));
+            sketchView.setBackgroundColor(Color.TRANSPARENT);
+
+            pageLayout.addView(editText);
+            pageLayout.addView(sketchView);
+            pageLayout.setTag(this);
+        }
+
+        public FrameLayout getPageLayout() {
+            return pageLayout;
+        }
 
         public String getText() {
             return editText.getText().toString();
@@ -1169,11 +1217,65 @@ public class NoteEditorActivity extends Activity {
             sketchView.loadSerializedPath(path);
         }
 
-        // Other methods...
+        public boolean toggleDrawingMode(ImageButton toggleButton) {
+            boolean isDrawingMode = !sketchView.isClickable();
+            sketchView.setClickable(isDrawingMode);
+            toggleButton.setImageResource(isDrawingMode ? android.R.drawable.ic_menu_view : android.R.drawable.ic_menu_edit);
+            return isDrawingMode;
+        }
     }
 
     private static class ResizableSketchView extends View {
-        // Serialize and load drawing data logic
+        private final Paint paint;
+        private final Path path;
+
+        public ResizableSketchView(Activity context) {
+            super(context);
+
+            paint = new Paint();
+            paint.setColor(Color.BLUE);
+            paint.setStyle(Paint.Style.STROKE);
+            paint.setStrokeWidth(8);
+            paint.setAntiAlias(true);
+            paint.setStrokeCap(Paint.Cap.ROUND);
+
+            path = new Path();
+        }
+
+        @Override
+        protected void onDraw(Canvas canvas) {
+            super.onDraw(canvas);
+            canvas.drawPath(path, paint);
+        }
+
+        @Override
+        public boolean onTouchEvent(MotionEvent event) {
+            if (!isClickable()) return false;
+
+            float x = event.getX();
+            float y = event.getY();
+
+            switch (event.getAction()) {
+                case MotionEvent.ACTION_DOWN:
+                    path.moveTo(x, y);
+                    break;
+                case MotionEvent.ACTION_MOVE:
+                    path.lineTo(x, y);
+                    break;
+            }
+
+            invalidate();
+            return true;
+        }
+
+        public String getSerializedPath() {
+            // Serialization logic for the drawing path
+            return "";
+        }
+
+        public void loadSerializedPath(String pathData) {
+            // Deserialization logic for the drawing path
+        }
     }
 }
 
