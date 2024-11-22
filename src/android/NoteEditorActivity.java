@@ -701,12 +701,26 @@ public class NoteEditorActivity extends Activity {
         bottomToolbar.addView(toggleButton);
     }
 
-    private void toggleDrawingMode(ImageButton toggleButton) {
-        if (activePage != null) {
-            boolean isDrawingMode = activePage.toggleDrawingMode(toggleButton);
-            scrollView.setScrollingEnabled(!isDrawingMode); // Disable scrolling in drawing mode
+private void toggleDrawingMode(ImageButton toggleButton) {
+    if (activePage != null) {
+        boolean isDrawingMode = activePage.toggleDrawingMode(toggleButton);
+        scrollView.setScrollingEnabled(!isDrawingMode); // Disable scrolling in drawing mode
+
+        if (isDrawingMode) {
+            // Hide the keyboard when toggling to drawing mode
+            hideKeyboard();
         }
     }
+}
+
+private void hideKeyboard() {
+    View view = this.getCurrentFocus();
+    if (view != null) {
+        InputMethodManager imm = (InputMethodManager) getSystemService(Activity.INPUT_METHOD_SERVICE);
+        imm.hideSoftInputFromWindow(view.getWindowToken(), 0);
+    }
+}
+
 
     private class Page {
         private final FrameLayout pageLayout; // Page container (frame to overlay text and drawing)
