@@ -958,6 +958,9 @@ import android.widget.ScrollView;
 
 import androidx.annotation.NonNull;
 
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.FileInputStream;
 import java.io.ByteArrayOutputStream;
 
 public class NoteEditorActivity extends Activity {
