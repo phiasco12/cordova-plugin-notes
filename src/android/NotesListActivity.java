@@ -387,7 +387,7 @@ public class NotesListActivity extends Activity {
 
     // Open the NoteEditActivity
     private void openNoteEditor(String noteFileName) {
-        Intent intent = new Intent(NotesListActivity.this, NotesEditActivity.class);
+        Intent intent = new Intent(NotesListActivity.this, NoteEditActivity.class);
         if (noteFileName != null) {
             intent.putExtra("noteFileName", noteFileName); // Pass the note file to edit
         }
