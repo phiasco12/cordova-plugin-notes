@@ -14,7 +14,7 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 
-public class NoteEditActivity extends Activity {
+public class NotesEditActivity extends Activity {
 
     private LinearLayout noteLayout;
     private EditText editText;
