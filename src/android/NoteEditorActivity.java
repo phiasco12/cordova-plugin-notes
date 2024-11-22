@@ -612,12 +612,14 @@ import android.os.Bundle;
 import android.view.Gravity;
 import android.view.MotionEvent;
 import android.view.View;
+import android.view.ViewTreeObserver;
 import android.view.ViewGroup;
 import android.widget.EditText;
 import android.widget.FrameLayout;
 import android.widget.ImageButton;
 import android.widget.LinearLayout;
 import android.widget.ScrollView;
+import android.widget.TextView;
 
 import androidx.annotation.NonNull;
 
@@ -625,8 +627,9 @@ public class NoteEditorActivity extends Activity {
 
     private LinearLayout contentContainer;
     private CustomScrollView scrollView;
-    private ResizableSketchView overlaySketchView; // The transparent overlay for drawing
+    private ResizableSketchView overlaySketchView;
     private boolean isDrawingMode = false;
+    private TextView pageIndicator; // For pagination
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -672,6 +675,18 @@ public class NoteEditorActivity extends Activity {
 
         toolbar.addView(toggleDrawButton);
 
+        // Add the pagination indicator
+        pageIndicator = new TextView(this);
+        pageIndicator.setLayoutParams(new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.WRAP_CONTENT,
+                LinearLayout.LayoutParams.MATCH_PARENT
+        ));
+        pageIndicator.setTextColor(Color.WHITE);
+        pageIndicator.setTextSize(16);
+        pageIndicator.setPadding(20, 0, 20, 0);
+        pageIndicator.setGravity(Gravity.CENTER_VERTICAL);
+        toolbar.addView(pageIndicator);
+
         // Main layout to hold the toolbar and content
         FrameLayout mainLayout = new FrameLayout(this);
         mainLayout.addView(scrollView);
@@ -692,18 +707,19 @@ public class NoteEditorActivity extends Activity {
         mainLayout.addView(toolbar);
 
         setContentView(mainLayout);
+
+        // Setup scroll listener for pagination
+        setupPagination();
     }
 
     private void toggleDrawingMode(ImageButton toggleButton) {
         isDrawingMode = !isDrawingMode;
 
         if (isDrawingMode) {
-            // Switch to drawing mode
             toggleButton.setImageResource(android.R.drawable.ic_menu_view);
             overlaySketchView.setEnabled(true); // Enable interaction with the drawing area
             scrollView.setScrollingEnabled(false); // Disable scrolling
         } else {
-            // Switch back to typing mode
             toggleButton.setImageResource(android.R.drawable.ic_menu_edit);
             overlaySketchView.setEnabled(false); // Make the drawing area non-interactive
             scrollView.setScrollingEnabled(true); // Enable scrolling
@@ -725,6 +741,22 @@ public class NoteEditorActivity extends Activity {
         newText.setSingleLine(false);
 
         contentContainer.addView(newText);
+    }
+
+    private void setupPagination() {
+        // Listen for layout changes to calculate page numbers dynamically
+        scrollView.getViewTreeObserver().addOnScrollChangedListener(() -> {
+            int scrollY = scrollView.getScrollY(); // Current scroll position
+            int viewHeight = scrollView.getHeight(); // Visible height
+            int contentHeight = contentContainer.getHeight(); // Total content height
+
+            // Calculate total pages and current page
+            int totalPages = (int) Math.ceil((double) contentHeight / viewHeight);
+            int currentPage = (int) Math.ceil((double) (scrollY + viewHeight) / viewHeight);
+
+            // Update the page indicator
+            pageIndicator.setText(currentPage + " / " + totalPages);
+        });
     }
 
     // Custom ScrollView to enable or disable scrolling
