@@ -164,7 +164,7 @@ public class NotesListActivity extends Activity {
 
 
 
-/*package com.example.notesplugin;
+package com.example.notesplugin;
 
 import android.app.Activity;
 import android.content.Intent;
@@ -245,7 +245,7 @@ public class NotesListActivity extends Activity {
     }
 
     // Load all saved notes from storage
-    private void loadSavedNotes() {
+    /*private void loadSavedNotes() {
         savedNotes = new ArrayList<>();
         File notesDir = new File(getFilesDir(), NOTES_DIR);
         if (!notesDir.exists()) {
@@ -259,7 +259,28 @@ public class NotesListActivity extends Activity {
                 loadNoteToGrid(file.getName());
             }
         }
+    }*/
+
+
+    // Load all saved notes from storage
+private void loadSavedNotes() {
+    // Clear the grid before reloading
+    notesGrid.removeAllViews();
+    savedNotes = new ArrayList<>();
+    File notesDir = new File(getFilesDir(), NOTES_DIR);
+    if (!notesDir.exists()) {
+        notesDir.mkdirs();
     }
+
+    File[] files = notesDir.listFiles();
+    if (files != null) {
+        for (File file : files) {
+            savedNotes.add(file.getName());
+            loadNoteToGrid(file.getName());
+        }
+    }
+}
+
 
     // Add a note to the grid layout
     private void loadNoteToGrid(String noteFileName) {
@@ -296,130 +317,4 @@ public class NotesListActivity extends Activity {
             }
         }
     }
-}*/
-
-
-
-
-
-
-
-package com.example.notesplugin;
-
-import android.app.Activity;
-import android.content.Intent;
-import android.graphics.Bitmap;
-import android.graphics.BitmapFactory;
-import android.graphics.drawable.GradientDrawable;
-import android.os.Bundle;
-import android.view.Gravity;
-import android.view.ViewGroup;
-import android.widget.Button;
-import android.widget.GridLayout;
-import android.widget.ImageView;
-import android.widget.LinearLayout;
-
-import java.io.File;
-import java.io.FileInputStream;
-import java.util.ArrayList;
-
-public class NotesListActivity extends Activity {
-
-    private static final String NOTES_DIR = "saved_notes";
-    private GridLayout notesGrid;
-    private ArrayList<String> savedNotes;
-
-    @Override
-    protected void onCreate(Bundle savedInstanceState) {
-        super.onCreate(savedInstanceState);
-
-        LinearLayout mainLayout = new LinearLayout(this);
-        mainLayout.setOrientation(LinearLayout.VERTICAL);
-
-        Button createNoteButton = new Button(this);
-        createNoteButton.setText("Create Note");
-        createNoteButton.setGravity(Gravity.CENTER);
-        createNoteButton.setOnClickListener(v -> openNoteEditor(null));
-        mainLayout.addView(createNoteButton);
-
-        notesGrid = new GridLayout(this);
-        notesGrid.setColumnCount(3);
-        notesGrid.setPadding(20, 20, 20, 20);
-        mainLayout.addView(notesGrid);
-
-        loadSavedNotes();
-
-        setContentView(mainLayout);
-    }
-
-    private void openNoteEditor(String noteFileName) {
-        Intent intent = new Intent(NotesListActivity.this, NoteEditorActivity.class);
-        if (noteFileName != null) {
-            intent.putExtra("noteFileName", noteFileName);
-        }
-        startActivityForResult(intent, 1);
-    }
-
-    @Override
-    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
-        if (requestCode == 1 && resultCode == RESULT_OK) {
-            String noteFileName = data.getStringExtra("noteFileName");
-            if (noteFileName != null && !savedNotes.contains(noteFileName)) {
-                savedNotes.add(noteFileName);
-                loadNoteToGrid(noteFileName);
-            }
-        }
-    }
-
-    private void loadSavedNotes() {
-        savedNotes = new ArrayList<>();
-        notesGrid.removeAllViews();
-
-        File notesDir = new File(getFilesDir(), NOTES_DIR);
-        if (!notesDir.exists()) {
-            notesDir.mkdirs();
-        }
-
-        File[] files = notesDir.listFiles();
-        if (files != null) {
-            for (File file : files) {
-                savedNotes.add(file.getName());
-                loadNoteToGrid(file.getName());
-            }
-        }
-    }
-
-    private void loadNoteToGrid(String noteFileName) {
-        File noteFile = new File(getFilesDir(), NOTES_DIR + "/" + noteFileName);
-        if (noteFile.exists()) {
-            try (FileInputStream fis = new FileInputStream(noteFile)) {
-                Bitmap noteBitmap = BitmapFactory.decodeStream(fis);
-
-                ImageView noteView = new ImageView(this);
-                noteView.setImageBitmap(noteBitmap);
-                noteView.setAdjustViewBounds(true);
-
-                GradientDrawable roundedBackground = new GradientDrawable();
-                roundedBackground.setColor(0xFFDDDDDD);
-                roundedBackground.setCornerRadius(50);
-                noteView.setBackground(roundedBackground);
-
-                GridLayout.LayoutParams params = new GridLayout.LayoutParams();
-                params.setMargins(20, 20, 20, 20);
-                params.width = 300;
-                params.height = 300;
-                noteView.setLayoutParams(params);
-
-                noteView.setOnClickListener(v -> openNoteEditor(noteFileName));
-
-                notesGrid.addView(noteView);
-
-            } catch (Exception e) {
-                e.printStackTrace();
-            }
-        }
-    }
 }
-
-
-
