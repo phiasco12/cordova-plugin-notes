@@ -629,7 +629,7 @@ import androidx.annotation.NonNull;
 public class NoteEditorActivity extends Activity {
 
     private LinearLayout pagesContainer; // The container for all pages
-    private ScrollView scrollView; // Scrollable container for the pages
+    private CustomScrollView scrollView; // Custom ScrollView to toggle scrolling
     private LinearLayout bottomToolbar; // Bottom toolbar for buttons
     private int pageHeight; // Fixed height for each page
     private int pageWidth; // Fixed width for each page
@@ -639,8 +639,8 @@ public class NoteEditorActivity extends Activity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
-        // Initialize the ScrollView
-        scrollView = new ScrollView(this);
+        // Initialize the CustomScrollView
+        scrollView = new CustomScrollView(this);
         scrollView.setLayoutParams(new FrameLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT,
                 ViewGroup.LayoutParams.MATCH_PARENT
@@ -703,7 +703,8 @@ public class NoteEditorActivity extends Activity {
 
     private void toggleDrawingMode(ImageButton toggleButton) {
         if (activePage != null) {
-            activePage.toggleDrawingMode(toggleButton);
+            boolean isDrawingMode = activePage.toggleDrawingMode(toggleButton);
+            scrollView.setScrollingEnabled(!isDrawingMode); // Disable scrolling in drawing mode
         }
     }
 
@@ -781,7 +782,7 @@ public class NoteEditorActivity extends Activity {
             return pageLayout;
         }
 
-        private void toggleDrawingMode(ImageButton toggleButton) {
+        public boolean toggleDrawingMode(ImageButton toggleButton) {
             isDrawingMode = !isDrawingMode;
             if (isDrawingMode) {
                 toggleButton.setImageResource(android.R.drawable.ic_menu_view);
@@ -793,6 +794,7 @@ public class NoteEditorActivity extends Activity {
                 sketchView.setClickable(false); // Make sketch click-through
                 editText.setVisibility(View.VISIBLE);
             }
+            return isDrawingMode; // Return the current mode
         }
 
         private void checkForOverflow() {
@@ -875,6 +877,29 @@ public class NoteEditorActivity extends Activity {
 
             invalidate(); // Redraw the view
             return true;
+        }
+    }
+
+    // Custom ScrollView with toggleable scrolling
+    private static class CustomScrollView extends ScrollView {
+        private boolean isScrollingEnabled = true;
+
+        public CustomScrollView(Activity context) {
+            super(context);
+        }
+
+        public void setScrollingEnabled(boolean enabled) {
+            isScrollingEnabled = enabled;
+        }
+
+        @Override
+        public boolean onTouchEvent(MotionEvent ev) {
+            return isScrollingEnabled && super.onTouchEvent(ev);
+        }
+
+        @Override
+        public boolean onInterceptTouchEvent(MotionEvent ev) {
+            return isScrollingEnabled && super.onInterceptTouchEvent(ev);
         }
     }
 }
