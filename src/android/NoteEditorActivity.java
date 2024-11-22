@@ -317,9 +317,8 @@ public class NoteEditorActivity extends Activity {
 
     private LinearLayout contentContainer; // Container for all content
     private ScrollView scrollView; // Main scrollable container
-    private EditText editText; // Single text area
-    private ResizableSketchView sketchView; // Single sketch area
     private boolean isDrawingMode = false; // Tracks whether drawing mode is active
+    private ResizableSketchView sketchView; // Single sketch area
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -336,21 +335,11 @@ public class NoteEditorActivity extends Activity {
         contentContainer = new LinearLayout(this);
         contentContainer.setOrientation(LinearLayout.VERTICAL);
         contentContainer.setPadding(20, 20, 20, 20); // Add padding around the content
+        contentContainer.setOnClickListener(v -> addNewTextFieldAtBottom()); // Add EditText on tap
         scrollView.addView(contentContainer);
 
-        // Create a text area
-        editText = new EditText(this);
-        editText.setLayoutParams(new LinearLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT,
-                ViewGroup.LayoutParams.WRAP_CONTENT
-        ));
-        editText.setBackgroundColor(Color.TRANSPARENT);
-        editText.setTextColor(Color.BLACK);
-        editText.setTextSize(16);
-        editText.setPadding(10, 10, 10, 10);
-        editText.setSingleLine(false);
-        editText.setGravity(Gravity.TOP);
-        contentContainer.addView(editText);
+        // Create an initial text area
+        addNewTextField();
 
         // Create a sketch area
         sketchView = new ResizableSketchView(this);
@@ -401,13 +390,44 @@ public class NoteEditorActivity extends Activity {
         if (isDrawingMode) {
             // Switch to drawing mode
             toggleButton.setImageResource(android.R.drawable.ic_menu_view); // Change icon to text
-            editText.setEnabled(false); // Disable typing
+            for (int i = 0; i < contentContainer.getChildCount(); i++) {
+                View child = contentContainer.getChildAt(i);
+                if (child instanceof EditText) {
+                    child.setEnabled(false); // Disable all text areas
+                }
+            }
             sketchView.setEnabled(true); // Enable drawing
         } else {
             // Switch back to typing mode
             toggleButton.setImageResource(android.R.drawable.ic_menu_edit); // Change icon to draw
-            editText.setEnabled(true); // Enable typing
+            for (int i = 0; i < contentContainer.getChildCount(); i++) {
+                View child = contentContainer.getChildAt(i);
+                if (child instanceof EditText) {
+                    child.setEnabled(true); // Enable all text areas
+                }
+            }
             sketchView.setEnabled(false); // Disable drawing
+        }
+    }
+
+    private void addNewTextField() {
+        EditText newText = new EditText(this);
+        newText.setLayoutParams(new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT
+        ));
+        newText.setBackgroundColor(Color.TRANSPARENT);
+        newText.setTextColor(Color.BLACK);
+        newText.setTextSize(16);
+        newText.setPadding(10, 10, 10, 10);
+        newText.setSingleLine(false);
+        newText.setGravity(Gravity.TOP);
+        contentContainer.addView(newText);
+    }
+
+    private void addNewTextFieldAtBottom() {
+        if (!isDrawingMode) { // Add only when in typing mode
+            addNewTextField();
         }
     }
 
