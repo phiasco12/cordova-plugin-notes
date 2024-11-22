@@ -628,6 +628,7 @@ public class NoteEditorActivity extends Activity {
     private LinearLayout contentContainer;
     private CustomScrollView scrollView;
     private boolean isDrawingMode = false;
+    private View lastFocusedView; // Tracks the last focused view
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -707,21 +708,50 @@ public class NoteEditorActivity extends Activity {
         newText.setHorizontallyScrolling(false);
         newText.setSingleLine(false);
 
+        // Track focus changes
         newText.setOnFocusChangeListener((v, hasFocus) -> {
-            if (hasFocus && isDrawingMode) {
-                // Add a drawing area when in drawing mode
-                addNewDrawingArea();
+            if (hasFocus) {
+                lastFocusedView = v;
+            }
+        });
+
+        newText.setOnClickListener(v -> {
+            if (isDrawingMode) {
+                addNewDrawingAreaBelow((View) v);
             }
         });
 
         contentContainer.addView(newText);
+        lastFocusedView = newText; // Track the last added text field
     }
 
     private void addNewDrawingArea() {
+        // Add a new drawing area below the last focused view or at the end
+        if (lastFocusedView != null) {
+            addNewDrawingAreaBelow(lastFocusedView);
+        } else {
+            addNewDrawingAreaAtEnd();
+        }
+    }
+
+    private void addNewDrawingAreaBelow(View view) {
+        int index = contentContainer.indexOfChild(view);
+        if (index != -1) {
+            ResizableSketchView sketchView = new ResizableSketchView(this);
+            sketchView.setLayoutParams(new LinearLayout.LayoutParams(
+                    ViewGroup.LayoutParams.MATCH_PARENT,
+                    500 // Fixed height for drawing areas
+            ));
+            sketchView.setBackgroundColor(Color.LTGRAY);
+            contentContainer.addView(sketchView, index + 1);
+        }
+    }
+
+    private void addNewDrawingAreaAtEnd() {
         ResizableSketchView sketchView = new ResizableSketchView(this);
         sketchView.setLayoutParams(new LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT,
-                500 // Fixed height for drawing areas
+                500
         ));
         sketchView.setBackgroundColor(Color.LTGRAY);
         contentContainer.addView(sketchView);
