@@ -1076,15 +1076,19 @@ public class NoteEditorActivity extends Activity {
 
     private Bitmap createNotesBitmap() {
         // Measure the full height of the notes content
-        int totalHeight = pagesContainer.getMeasuredHeight();
-        int totalWidth = pagesContainer.getMeasuredWidth();
+        int totalHeight = pagesContainer.getChildCount() * pageHeight;
+        int totalWidth = pageWidth;
 
         // Create a bitmap large enough to hold all pages
         Bitmap bitmap = Bitmap.createBitmap(totalWidth, totalHeight, Bitmap.Config.ARGB_8888);
         Canvas canvas = new Canvas(bitmap);
 
-        // Draw the notes content onto the canvas
-        pagesContainer.draw(canvas);
+        // Draw each page onto the canvas
+        for (int i = 0; i < pagesContainer.getChildCount(); i++) {
+            View pageView = pagesContainer.getChildAt(i);
+            pageView.layout(0, i * pageHeight, pageWidth, (i + 1) * pageHeight);
+            pageView.draw(canvas);
+        }
         return bitmap;
     }
 
@@ -1122,6 +1126,20 @@ public class NoteEditorActivity extends Activity {
             editText.setHorizontallyScrolling(false);
             editText.setSingleLine(false);
 
+            // Monitor text changes to handle overflow
+            editText.addTextChangedListener(new TextWatcher() {
+                @Override
+                public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
+
+                @Override
+                public void onTextChanged(CharSequence s, int start, int before, int count) {}
+
+                @Override
+                public void afterTextChanged(Editable s) {
+                    checkForOverflow();
+                }
+            });
+
             // Create the sketch view for drawing
             sketchView = new ResizableSketchView(context);
             sketchView.setLayoutParams(new FrameLayout.LayoutParams(
@@ -1149,6 +1167,14 @@ public class NoteEditorActivity extends Activity {
                 sketchView.setClickable(false); // Make sketch click-through
             }
             return isDrawingMode; // Return the current mode
+        }
+
+        private void checkForOverflow() {
+            Layout layout = editText.getLayout();
+            if (layout != null && layout.getHeight() > editText.getHeight()) {
+                // Add a new page when the text overflows
+                addNewPage();
+            }
         }
 
         private GradientDrawable createPageBackground() {
@@ -1227,4 +1253,3 @@ public class NoteEditorActivity extends Activity {
         }
     }
 }
-
