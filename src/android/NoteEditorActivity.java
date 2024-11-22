@@ -601,6 +601,8 @@ public class NoteEditorActivity extends Activity {
 
 
 
+
+
 package com.example.notesplugin;
 
 import android.app.Activity;
@@ -608,6 +610,7 @@ import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Paint;
 import android.graphics.Path;
+import android.graphics.drawable.GradientDrawable;
 import android.os.Bundle;
 import android.view.Gravity;
 import android.view.MotionEvent;
@@ -629,7 +632,8 @@ public class NoteEditorActivity extends Activity {
     private CustomScrollView scrollView;
     private ResizableSketchView overlaySketchView;
     private boolean isDrawingMode = false;
-    private TextView pageIndicator; // For pagination
+    private TextView pageIndicator;
+    private int pageHeight; // Height of each page
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -645,11 +649,16 @@ public class NoteEditorActivity extends Activity {
         // LinearLayout for holding content
         contentContainer = new LinearLayout(this);
         contentContainer.setOrientation(LinearLayout.VERTICAL);
-        contentContainer.setPadding(20, 20, 20, 20);
+        contentContainer.setPadding(0, 0, 0, 0);
         scrollView.addView(contentContainer);
 
-        // Add an initial text area
-        addNewTextField();
+        // Determine page height dynamically based on screen size
+        scrollView.getViewTreeObserver().addOnGlobalLayoutListener(() -> {
+            if (pageHeight == 0) {
+                pageHeight = scrollView.getHeight();
+                addNewPage(); // Add the first page
+            }
+        });
 
         // Create a toolbar for toggle buttons
         LinearLayout toolbar = new LinearLayout(this);
@@ -726,7 +735,7 @@ public class NoteEditorActivity extends Activity {
         }
     }
 
-    private void addNewTextField() {
+    private void addNewTextField(LinearLayout page) {
         EditText newText = new EditText(this);
         newText.setLayoutParams(new LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT,
@@ -740,11 +749,35 @@ public class NoteEditorActivity extends Activity {
         newText.setHorizontallyScrolling(false);
         newText.setSingleLine(false);
 
-        contentContainer.addView(newText);
+        page.addView(newText);
+    }
+
+    private void addNewPage() {
+        // Create a new page container
+        LinearLayout newPage = new LinearLayout(this);
+        newPage.setOrientation(LinearLayout.VERTICAL);
+        newPage.setLayoutParams(new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                pageHeight - 20 // Add some space between pages
+        ));
+        newPage.setPadding(30, 30, 30, 30);
+        newPage.setBackground(createPageBackground());
+
+        contentContainer.addView(newPage);
+
+        // Add an initial text field to the page
+        addNewTextField(newPage);
+    }
+
+    private GradientDrawable createPageBackground() {
+        GradientDrawable background = new GradientDrawable();
+        background.setColor(Color.WHITE); // Set the background color
+        background.setCornerRadius(30); // Set rounded corners
+        background.setStroke(5, Color.LTGRAY); // Add a light gray border
+        return background;
     }
 
     private void setupPagination() {
-        // Listen for layout changes to calculate page numbers dynamically
         scrollView.getViewTreeObserver().addOnScrollChangedListener(() -> {
             int scrollY = scrollView.getScrollY(); // Current scroll position
             int viewHeight = scrollView.getHeight(); // Visible height
@@ -831,3 +864,4 @@ public class NoteEditorActivity extends Activity {
         }
     }
 }
+
