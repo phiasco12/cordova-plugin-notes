@@ -294,12 +294,13 @@ public class NoteEditorActivity extends Activity {
 package com.example.notesplugin;
 
 import android.app.Activity;
-import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Paint;
 import android.graphics.Path;
+import android.graphics.drawable.ColorDrawable;
 import android.os.Bundle;
-import android.os.Handler;
+import android.text.Layout;
+import android.text.TextUtils;
 import android.view.Gravity;
 import android.view.MotionEvent;
 import android.view.View;
@@ -388,30 +389,45 @@ public class NoteEditorActivity extends Activity {
         if (event.getAction() == MotionEvent.ACTION_DOWN && !isDrawingMode) {
             float x = event.getX();
             float y = event.getY();
-            showCursor(x, y); // Show red cursor at clicked position
-            addNewTextFieldAtLocation((int) y); // Add a new text field
+            moveCursorToClickedPosition(x, y); // Move cursor to the clicked position
             return true;
         }
         return false;
     }
 
-    private void showCursor(float x, float y) {
-        // Create a small red circular view to act as the cursor
-        View cursor = new View(this);
-        cursor.setLayoutParams(new FrameLayout.LayoutParams(20, 20)); // Small circle
-        cursor.setBackgroundColor(Color.RED);
+    private void moveCursorToClickedPosition(float x, float y) {
+        for (int i = 0; i < contentContainer.getChildCount(); i++) {
+            View child = contentContainer.getChildAt(i);
+            if (child instanceof EditText) {
+                EditText editText = (EditText) child;
 
-        // Position the cursor
-        FrameLayout.LayoutParams params = (FrameLayout.LayoutParams) cursor.getLayoutParams();
-        params.leftMargin = (int) x - 10; // Center the cursor horizontally
-        params.topMargin = (int) y - 10;  // Center the cursor vertically
-        cursor.setLayoutParams(params);
+                // Check if the click is within this EditText's bounds
+                int[] location = new int[2];
+                child.getLocationOnScreen(location);
 
-        // Add the cursor to the main layout
-        mainLayout.addView(cursor);
+                int left = location[0];
+                int top = location[1];
+                int right = left + child.getWidth();
+                int bottom = top + child.getHeight();
 
-        // Remove the cursor after 500ms
-        new Handler().postDelayed(() -> mainLayout.removeView(cursor), 500);
+                if (x >= left && x <= right && y >= top && y <= bottom) {
+                    // Focus the EditText
+                    editText.requestFocus();
+
+                    // Calculate the cursor position based on click
+                    Layout layout = editText.getLayout();
+                    if (layout != null) {
+                        int line = layout.getLineForVertical((int) (y - top));
+                        int offset = layout.getOffsetForHorizontal(line, x - left);
+                        editText.setSelection(offset);
+                    }
+                    return;
+                }
+            }
+        }
+
+        // If no existing EditText was clicked, create a new one at the bottom
+        addNewTextFieldAtLocation((int) y);
     }
 
     private void toggleDrawingMode(ImageButton toggleButton) {
@@ -455,6 +471,7 @@ public class NoteEditorActivity extends Activity {
         newText.setGravity(Gravity.TOP);
         newText.setHorizontallyScrolling(false); // Disable horizontal scrolling
         newText.setSingleLine(false);
+        newText.setCursorDrawableColor(Color.RED); // Change cursor color to red
         contentContainer.addView(newText);
     }
 
@@ -471,79 +488,28 @@ public class NoteEditorActivity extends Activity {
         newText.setGravity(Gravity.TOP);
         newText.setHorizontallyScrolling(false); // Disable horizontal scrolling
         newText.setSingleLine(false);
+        newText.setCursorDrawableColor(Color.RED); // Change cursor color to red
         contentContainer.addView(newText);
         scrollView.post(() -> scrollView.smoothScrollTo(0, y)); // Scroll to the new text field
     }
 
-    // Custom ScrollView to enable or disable scrolling
-    private static class CustomScrollView extends ScrollView {
-
-        private boolean isScrollable = true;
-
-        public CustomScrollView(Activity context) {
-            super(context);
-        }
-
-        public void setScrollingEnabled(boolean enabled) {
-            isScrollable = enabled;
-        }
-
-        @Override
-        public boolean onTouchEvent(MotionEvent ev) {
-            return isScrollable && super.onTouchEvent(ev);
-        }
-
-        @Override
-        public boolean onInterceptTouchEvent(MotionEvent ev) {
-            return isScrollable && super.onInterceptTouchEvent(ev);
-        }
-    }
-
-    // Custom View for the Sketch Area
-    private static class ResizableSketchView extends View {
-
-        private final Paint paint;
-        private final Path path;
-
-        public ResizableSketchView(@NonNull Activity context) {
-            super(context);
-
-            paint = new Paint();
-            paint.setColor(Color.BLACK);
-            paint.setStyle(Paint.Style.STROKE);
-            paint.setStrokeWidth(8);
-            paint.setAntiAlias(true);
-            paint.setStrokeCap(Paint.Cap.ROUND);
-
-            path = new Path();
-        }
-
-        @Override
-        protected void onDraw(Canvas canvas) {
-            super.onDraw(canvas);
-            canvas.drawPath(path, paint);
-        }
-
-        @Override
-        public boolean onTouchEvent(MotionEvent event) {
-            if (!isEnabled()) return false; // Ignore touch events when disabled
-
-            float x = event.getX();
-            float y = event.getY();
-
-            switch (event.getAction()) {
-                case MotionEvent.ACTION_DOWN:
-                    path.moveTo(x, y);
-                    break;
-                case MotionEvent.ACTION_MOVE:
-                    path.lineTo(x, y);
-                    break;
-                case MotionEvent.ACTION_UP:
-                    break;
-            }
-
-            invalidate(); // Redraw the view
-            return true;
+    // Utility method to set the cursor color
+    private static void setCursorDrawableColor(EditText editText, int color) {
+        try {
+            java.lang.reflect.Field f = TextView.class.getDeclaredField("mCursorDrawableRes");
+            f.setAccessible(true);
+            int drawableResId = f.getInt(editText);
+            Drawable drawable = AppCompatResources.getDrawable(editText.getContext(), drawableResId);
+            drawable.setColorFilter(new PorterDuffColorFilter(color, PorterDuff.Mode.SRC_IN));
+            Drawable[] drawables = {drawable, drawable};
+            f = TextView.class.getDeclaredField("mEditor");
+            f.setAccessible(true);
+            Object editor = f.get(editText);
+            Field editorDrawableField = editor.getClass().getDeclaredField("mCursorDrawable");
+            editorDrawableField.setAccessible(true);
+            editorDrawableField.set(editor, drawables);
+        } catch (Exception e) {
+            e.printStackTrace();
         }
     }
 }
