@@ -315,20 +315,15 @@ import androidx.annotation.NonNull;
 
 public class NoteEditorActivity extends Activity {
 
-    private LinearLayout pagesContainer; // Container for all pages
+    private LinearLayout contentContainer; // Container for all content
     private ScrollView scrollView; // Main scrollable container
-    private int screenHeight; // Screen height for creating full-page layouts
-    private LinearLayout currentActivePage; // Tracks the currently active (focused) page
-    private EditText currentActiveEditText; // Tracks the currently focused EditText
-    private ResizableSketchView currentSketchView; // Tracks the sketch view for the current page
     private boolean isDrawingMode = false; // Tracks whether drawing mode is active
+    private ResizableSketchView sketchView; // Single sketch area
+    private EditText editText; // Single text area
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-
-        // Get screen height dynamically
-        screenHeight = getResources().getDisplayMetrics().heightPixels;
 
         // Initialize the ScrollView
         scrollView = new ScrollView(this);
@@ -337,15 +332,37 @@ public class NoteEditorActivity extends Activity {
                 ViewGroup.LayoutParams.MATCH_PARENT
         ));
 
-        // LinearLayout for holding pages
-        pagesContainer = new LinearLayout(this);
-        pagesContainer.setOrientation(LinearLayout.VERTICAL);
-        scrollView.addView(pagesContainer);
+        // LinearLayout for holding content
+        contentContainer = new LinearLayout(this);
+        contentContainer.setOrientation(LinearLayout.VERTICAL);
+        contentContainer.setPadding(20, 20, 20, 20); // Add padding around the content
+        scrollView.addView(contentContainer);
 
-        // Add the first page
-        createNewPage();
+        // Create a text area
+        editText = new EditText(this);
+        editText.setLayoutParams(new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT
+        ));
+        editText.setBackgroundColor(Color.TRANSPARENT);
+        editText.setTextColor(Color.BLACK);
+        editText.setTextSize(16);
+        editText.setPadding(10, 10, 10, 10);
+        editText.setSingleLine(false);
+        editText.setGravity(Gravity.TOP);
+        contentContainer.addView(editText);
 
-        // Create a toolbar with a drawing button
+        // Create a sketch area
+        sketchView = new ResizableSketchView(this);
+        sketchView.setLayoutParams(new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                500 // Initial height for the sketch area
+        ));
+        sketchView.setBackgroundColor(Color.TRANSPARENT);
+        sketchView.setEnabled(false); // Initially disabled
+        contentContainer.addView(sketchView);
+
+        // Create a toolbar with a toggle button
         LinearLayout toolbar = new LinearLayout(this);
         toolbar.setOrientation(LinearLayout.HORIZONTAL);
         toolbar.setGravity(Gravity.BOTTOM);
@@ -357,7 +374,7 @@ public class NoteEditorActivity extends Activity {
         toolbarParams.gravity = Gravity.BOTTOM;
         toolbar.setLayoutParams(toolbarParams);
 
-        // Add a drawing button to the toolbar
+        // Add a toggle button for switching modes
         ImageButton toggleDrawButton = new ImageButton(this);
         toggleDrawButton.setImageResource(android.R.drawable.ic_menu_edit); // Initial icon for drawing
         toggleDrawButton.setBackgroundColor(Color.LTGRAY);
@@ -378,87 +395,19 @@ public class NoteEditorActivity extends Activity {
         setContentView(mainLayout);
     }
 
-    private void createNewPage() {
-        // Create a container for a single page
-        LinearLayout pageLayout = new LinearLayout(this);
-        pageLayout.setOrientation(LinearLayout.VERTICAL);
-        LinearLayout.LayoutParams pageLayoutParams = new LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT,
-                screenHeight - 100 // Slightly smaller than the screen to leave space for margin
-        );
-        pageLayoutParams.setMargins(20, 20, 20, 20); // Add margins around each page
-        pageLayout.setLayoutParams(pageLayoutParams);
-        pageLayout.setBackgroundColor(Color.WHITE);
-        pageLayout.setPadding(30, 30, 30, 30); // Add padding inside the page
-
-        // Create an EditText for writing
-        EditText pageEditText = new EditText(this);
-        pageEditText.setLayoutParams(new LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT,
-                0,
-                1 // Weight to use remaining space for the EditText
-        ));
-        pageEditText.setBackgroundColor(Color.TRANSPARENT);
-        pageEditText.setTextColor(Color.BLACK);
-        pageEditText.setTextSize(16);
-        pageEditText.setPadding(10, 10, 10, 10);
-        pageEditText.setSingleLine(false);
-        pageEditText.setGravity(Gravity.TOP);
-        pageEditText.setVerticalScrollBarEnabled(false);
-
-        // Add a listener to track the current active page
-        pageEditText.setOnFocusChangeListener((v, hasFocus) -> {
-            if (hasFocus) {
-                currentActivePage = pageLayout;
-                currentActiveEditText = pageEditText;
-            }
-        });
-
-        // Create a sketch area
-        ResizableSketchView sketchView = new ResizableSketchView(this);
-        sketchView.setLayoutParams(new LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT,
-                500 // Fixed initial height for the sketch area
-        ));
-        sketchView.setBackgroundColor(Color.TRANSPARENT);
-
-        // Add the EditText and the sketch area to the page
-        pageLayout.addView(pageEditText);
-        pageLayout.addView(sketchView);
-
-        // Add the new page to the container
-        pagesContainer.addView(pageLayout);
-
-        // Set the new page as the active page
-        currentActivePage = pageLayout;
-        currentActiveEditText = pageEditText;
-        currentSketchView = sketchView;
-
-        // Scroll to the new page
-        scrollView.post(() -> scrollView.smoothScrollTo(0, pageLayout.getTop()));
-    }
-
     private void toggleDrawingMode(ImageButton toggleButton) {
         isDrawingMode = !isDrawingMode; // Toggle mode
 
         if (isDrawingMode) {
             // Switch to drawing mode
             toggleButton.setImageResource(android.R.drawable.ic_menu_view); // Change icon to text
-            if (currentActiveEditText != null) {
-                currentActiveEditText.clearFocus(); // Clear focus from the EditText
-            }
-            if (currentSketchView != null) {
-                currentSketchView.setEnabled(true); // Enable drawing
-            }
+            editText.setEnabled(false); // Disable typing
+            sketchView.setEnabled(true); // Enable drawing
         } else {
             // Switch back to typing mode
             toggleButton.setImageResource(android.R.drawable.ic_menu_edit); // Change icon to draw
-            if (currentActiveEditText != null) {
-                currentActiveEditText.requestFocus(); // Restore focus to EditText
-            }
-            if (currentSketchView != null) {
-                currentSketchView.setEnabled(false); // Disable drawing
-            }
+            editText.setEnabled(true); // Enable typing
+            sketchView.setEnabled(false); // Disable drawing
         }
     }
 
