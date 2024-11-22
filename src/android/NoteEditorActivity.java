@@ -312,6 +312,7 @@ import android.widget.FrameLayout;
 import android.widget.ImageButton;
 import android.widget.LinearLayout;
 import android.widget.ScrollView;
+import android.widget.TextView; // Added import for TextView
 
 import androidx.annotation.NonNull;
 import androidx.appcompat.content.res.AppCompatResources;
