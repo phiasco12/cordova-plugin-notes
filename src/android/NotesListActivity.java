@@ -195,6 +195,14 @@ public class NotesListActivity extends Activity {
         GridLayout mainLayout = new GridLayout(this);
         mainLayout.setColumnCount(1); // Single column for the create note button
 
+
+
+                // Create note button
+        Button createNoteButton = new Button(this);
+        createNoteButton.setText("Create Note");
+        createNoteButton.setOnClickListener(v -> openNoteEditor());
+        mainLayout.addView(createNoteButton);
+
         // Notes grid layout
         notesGrid = new GridLayout(this);
         notesGrid.setColumnCount(3); // 3 columns in the grid
@@ -213,6 +221,9 @@ public class NotesListActivity extends Activity {
         // Set the layout as the content view
         setContentView(mainLayout);
     }
+
+
+
 
     // Open the NoteEditorActivity
     private void openNoteEditor(String noteFileName) {
