@@ -603,7 +603,7 @@ public class NoteEditorActivity extends Activity {
 
 
 
-package com.example.paginatededitor;
+package com.example.notesplugin;
 
 import android.app.Activity;
 import android.graphics.Canvas;
@@ -626,17 +626,17 @@ import android.widget.ScrollView;
 
 import androidx.annotation.NonNull;
 
-public class PaginatedEditorActivity extends Activity {
+public class NoteEditorActivity extends Activity {
 
     private LinearLayout contentContainer; // Container for all pages
     private ScrollView scrollView; // Scrollable view for multiple pages
-    private int pageHeight; // Height of each page based on screen size
+    private int pageHeight; // Height of each page dynamically calculated
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
-        // Create a scrollable container
+        // Initialize the ScrollView
         scrollView = new ScrollView(this);
         scrollView.setLayoutParams(new ViewGroup.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT,
@@ -763,7 +763,7 @@ public class PaginatedEditorActivity extends Activity {
                 String remainingText = overflowText.substring(overflowText.length() / 2);
 
                 // Create a new page and set the remaining text
-                Page newPage = new Page(PaginatedEditorActivity.this, pageHeight);
+                Page newPage = new Page(NoteEditorActivity.this, pageHeight);
                 newPage.editText.setText(remainingText);
                 contentContainer.addView(newPage.getPageLayout());
             }
@@ -823,3 +823,4 @@ public class PaginatedEditorActivity extends Activity {
         }
     }
 }
+
