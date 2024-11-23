@@ -1863,14 +1863,20 @@ public class NoteEditorActivity extends Activity {
 
 
 
-    private void setupBottomToolbar() {
+    
+
+
+
+
+
+
+
+private void setupBottomToolbar() {
     bottomToolbar = new LinearLayout(this);
     bottomToolbar.setOrientation(LinearLayout.HORIZONTAL);
     bottomToolbar.setGravity(Gravity.CENTER);
     bottomToolbar.setBackgroundColor(Color.DKGRAY);
-    bottomToolbar.setPadding(20, 20, 20, 20);
 
-    // Layout parameters for the toolbar
     FrameLayout.LayoutParams toolbarParams = new FrameLayout.LayoutParams(
             ViewGroup.LayoutParams.MATCH_PARENT,
             150 // Fixed height for the toolbar
@@ -1878,7 +1884,7 @@ public class NoteEditorActivity extends Activity {
     toolbarParams.gravity = Gravity.BOTTOM;
     bottomToolbar.setLayoutParams(toolbarParams);
 
-    // Layout parameters for the buttons to ensure even spacing
+    // Common layout parameters for evenly spaced buttons
     LinearLayout.LayoutParams buttonParams = new LinearLayout.LayoutParams(
             0, // Width is 0 to distribute evenly
             ViewGroup.LayoutParams.MATCH_PARENT,
@@ -1899,22 +1905,17 @@ public class NoteEditorActivity extends Activity {
     toggleSketchButton.setOnClickListener(v -> toggleDrawingMode(toggleSketchButton));
     toggleSketchButton.setLayoutParams(buttonParams);
 
-    // Toggle Text Mode button
-    ImageButton toggleTextButton = new ImageButton(this);
-    toggleTextButton.setImageResource(android.R.drawable.ic_menu_agenda); // Replace with a relevant drawable
-    toggleTextButton.setBackgroundColor(Color.LTGRAY);
-    toggleTextButton.setOnClickListener(v -> toggleTextMode()); // Implement toggleTextMode method if needed
-    toggleTextButton.setLayoutParams(buttonParams);
+    // Extra button for future use (optional, placeholder example)
+    ImageButton placeholderButton = new ImageButton(this);
+    placeholderButton.setImageResource(android.R.drawable.ic_menu_help); // Example icon
+    placeholderButton.setBackgroundColor(Color.LTGRAY);
+    placeholderButton.setLayoutParams(buttonParams);
 
     // Add buttons to the toolbar
     bottomToolbar.addView(saveButton);
     bottomToolbar.addView(toggleSketchButton);
-    bottomToolbar.addView(toggleTextButton);
+    bottomToolbar.addView(placeholderButton);
 }
-
-
-
-
 
 
 
