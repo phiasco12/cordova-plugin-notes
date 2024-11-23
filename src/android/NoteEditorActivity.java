@@ -2128,7 +2128,125 @@ public class NoteEditorActivity extends Activity {
         }
     }
 
-    private static class ResizableSketchView extends View {
+
+
+private static class ResizableSketchView extends View {
+
+    private final Paint paint;
+    private final Path path;
+    private final ArrayList<ArrayList<Pair<Float, Float>>> strokes = new ArrayList<>();
+    private ArrayList<Pair<Float, Float>> currentStroke;
+
+    public ResizableSketchView(@NonNull Activity context, int width, int height) {
+        super(context);
+
+        paint = new Paint();
+        paint.setColor(Color.BLUE);
+        paint.setStyle(Paint.Style.STROKE);
+        paint.setStrokeWidth(8);
+        paint.setAntiAlias(true);
+        paint.setStrokeCap(Paint.Cap.ROUND);
+
+        path = new Path();
+    }
+
+    @Override
+    protected void onDraw(Canvas canvas) {
+        super.onDraw(canvas);
+        canvas.drawPath(path, paint);
+    }
+
+    @Override
+    public boolean onTouchEvent(MotionEvent event) {
+        if (!isClickable()) return false; // Make the sketch click-through in typing mode
+
+        float x = event.getX();
+        float y = event.getY();
+
+        switch (event.getAction()) {
+            case MotionEvent.ACTION_DOWN:
+                currentStroke = new ArrayList<>();
+                currentStroke.add(new Pair<>(x, y));
+                strokes.add(currentStroke);
+                path.moveTo(x, y);
+                break;
+            case MotionEvent.ACTION_MOVE:
+                currentStroke.add(new Pair<>(x, y));
+                path.lineTo(x, y);
+                break;
+            case MotionEvent.ACTION_UP:
+                currentStroke.add(new Pair<>(x, y));
+                path.lineTo(x, y);
+                break;
+        }
+
+        invalidate(); // Redraw the view
+        return true;
+    }
+
+    public JSONArray getSketchPaths() {
+        JSONArray strokesArray = new JSONArray();
+        try {
+            for (ArrayList<Pair<Float, Float>> stroke : strokes) {
+                JSONArray strokeArray = new JSONArray();
+                for (Pair<Float, Float> point : stroke) {
+                    JSONObject pointObject = new JSONObject();
+                    pointObject.put("x", point.first);
+                    pointObject.put("y", point.second);
+                    strokeArray.put(pointObject);
+                }
+                strokesArray.put(strokeArray);
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return strokesArray;
+    }
+
+    public void loadSketchPaths(JSONArray sketchPaths) {
+        path.reset();
+        strokes.clear();
+        try {
+            for (int i = 0; i < sketchPaths.length(); i++) {
+                JSONArray strokeArray = sketchPaths.getJSONArray(i);
+                ArrayList<Pair<Float, Float>> stroke = new ArrayList<>();
+                for (int j = 0; j < strokeArray.length(); j++) {
+                    JSONObject pointObject = strokeArray.getJSONObject(j);
+                    float x = (float) pointObject.getDouble("x");
+                    float y = (float) pointObject.getDouble("y");
+                    stroke.add(new Pair<>(x, y));
+                }
+                strokes.add(stroke);
+            }
+            redrawPath();
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
+    private void redrawPath() {
+        path.reset();
+        for (ArrayList<Pair<Float, Float>> stroke : strokes) {
+            if (stroke.size() > 0) {
+                Pair<Float, Float> firstPoint = stroke.get(0);
+                path.moveTo(firstPoint.first, firstPoint.second);
+                for (int i = 1; i < stroke.size(); i++) {
+                    Pair<Float, Float> point = stroke.get(i);
+                    path.lineTo(point.first, point.second);
+                }
+            }
+        }
+        invalidate();
+    }
+}
+
+
+
+
+
+    
+
+    /*private static class ResizableSketchView extends View {
 
         private final Paint paint;
         private final Path path;
@@ -2187,7 +2305,7 @@ public class NoteEditorActivity extends Activity {
 
             return pathsArray;
         }
-    }
+    }*/
 
     private static class CustomScrollView extends ScrollView {
         private boolean isScrollingEnabled = true;
