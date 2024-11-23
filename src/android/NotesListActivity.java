@@ -392,11 +392,18 @@ public class NotesListActivity extends Activity {
     }
 
     // Open the NoteEditActivity for editing a saved note
-    private void openNoteEditor(String noteFileName) {
+    /*private void openNoteEditor(String noteFileName) {
         Intent intent = new Intent(NotesListActivity.this, NoteEditActivity.class);
         intent.putExtra("noteFileName", noteFileName); // Pass the note file to edit
         startActivity(intent);
-    }
+    }*/
+
+    private void openNoteEditor(String noteFileName) {
+    String noteBaseName = noteFileName.replace(".png", ""); // Remove extension
+    Intent intent = new Intent(NotesListActivity.this, NoteEditActivity.class);
+    intent.putExtra("noteFileName", noteBaseName); // Pass base name
+    startActivity(intent);
+}
 
     // Handle saved notes
     @Override
