@@ -1904,7 +1904,7 @@ public class NoteEditorActivity extends Activity {
         }
     }
 
-    private void saveAllPagesDataAsJSON(String bitmapFileName) {
+    /*private void saveAllPagesDataAsJSON(String bitmapFileName) {
         try {
             // Create the JSON filename by replacing ".png" with ".json"
             String jsonFileName = bitmapFileName.replace(".png", ".json");
@@ -1945,7 +1945,53 @@ public class NoteEditorActivity extends Activity {
         } catch (Exception e) {
             e.printStackTrace();
         }
+    }*/
+
+
+
+    private void saveAllPagesDataAsJSON(String bitmapFileName) {
+    try {
+        // Create the JSON filename by replacing ".png" with ".json"
+        String jsonFileName = bitmapFileName.replace(".png", ".json");
+
+        // Directory to save notes
+        File notesDir = new File(getFilesDir(), "saved_notes");
+        if (!notesDir.exists()) {
+            notesDir.mkdirs();
+        }
+
+        // JSON to hold all page data
+        JSONArray pagesArray = new JSONArray();
+
+        // Loop through all pages in the container
+        for (int i = 0; i < pagesContainer.getChildCount(); i++) {
+            Page page = (Page) pagesContainer.getChildAt(i).getTag(); // Get Page object
+            JSONObject pageObject = new JSONObject();
+
+            // Save text content
+            pageObject.put("text", page.editText.getText().toString());
+
+            // Save sketch paths
+            JSONArray sketchPaths = page.sketchView.getSketchPaths();
+            pageObject.put("sketch", sketchPaths);
+
+            pagesArray.put(pageObject);
+        }
+
+        // Create the final JSON object
+        JSONObject notesObject = new JSONObject();
+        notesObject.put("pages", pagesArray);
+
+        // Save the JSON file
+        File jsonFile = new File(notesDir, jsonFileName);
+        try (FileWriter fileWriter = new FileWriter(jsonFile)) {
+            fileWriter.write(notesObject.toString());
+        }
+    } catch (Exception e) {
+        e.printStackTrace();
     }
+}
+
 
     private Bitmap createBitmapFromView(View view) {
         // Create a bitmap for the view's dimensions
