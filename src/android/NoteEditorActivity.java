@@ -1373,6 +1373,14 @@ import java.io.FileOutputStream;
 import java.io.FileInputStream;
 import java.io.ByteArrayOutputStream;
 
+// Additional Imports
+import android.util.DisplayMetrics; // For screen dimension calculations
+import android.widget.Button; // If buttons are added later
+import android.widget.TextView; // For potential cursor or labels
+import androidx.appcompat.app.AppCompatActivity; // If extending AppCompatActivity becomes necessary
+import java.io.IOException; // To handle file-related exceptions
+
+
 public class NoteEditorActivity extends Activity {
 
     private LinearLayout pagesContainer; // The container for all pages
