@@ -1341,7 +1341,7 @@ public class NoteEditorActivity extends Activity {
 
 
 
-package com.example.notesplugin;
+/*package com.example.notesplugin;
 
 import android.app.Activity;
 import android.content.Intent;
@@ -1731,4 +1731,317 @@ private void saveAndReturn() {
             return isScrollingEnabled && super.onInterceptTouchEvent(ev);
         }
     }
+}*/
+
+
+
+
+
+
+package com.example.notesplugin;
+
+import android.app.Activity;
+import android.content.Intent;
+import android.graphics.Bitmap;
+import android.graphics.Canvas;
+import android.graphics.Color;
+import android.graphics.Paint;
+import android.graphics.Path;
+import android.graphics.PathMeasure;
+import android.graphics.drawable.GradientDrawable;
+import android.os.Bundle;
+import android.text.Editable;
+import android.text.Layout;
+import android.text.TextWatcher;
+import android.view.Gravity;
+import android.view.MotionEvent;
+import android.view.View;
+import android.view.ViewGroup;
+import android.view.inputmethod.InputMethodManager;
+import android.widget.EditText;
+import android.widget.FrameLayout;
+import android.widget.ImageButton;
+import android.widget.LinearLayout;
+import android.widget.ScrollView;
+
+import androidx.annotation.NonNull;
+
+import org.json.JSONArray;
+import org.json.JSONObject;
+
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.FileWriter;
+
+public class NoteEditorActivity extends Activity {
+
+    private LinearLayout pagesContainer; // Container for all pages
+    private CustomScrollView scrollView; // ScrollView for managing scrolling
+    private LinearLayout bottomToolbar; // Bottom toolbar
+    private int pageHeight; // Height for each page
+    private int pageWidth; // Width for each page
+    private Page activePage; // Current active page
+
+    @Override
+    protected void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+
+        // Initialize the ScrollView
+        scrollView = new CustomScrollView(this);
+        scrollView.setLayoutParams(new FrameLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.MATCH_PARENT
+        ));
+
+        // Initialize the pages container
+        pagesContainer = new LinearLayout(this);
+        pagesContainer.setOrientation(LinearLayout.VERTICAL);
+        pagesContainer.setPadding(20, 20, 20, 20); // Padding between container edges and pages
+        scrollView.addView(pagesContainer);
+
+        // Calculate page dimensions dynamically
+        scrollView.getViewTreeObserver().addOnGlobalLayoutListener(() -> {
+            if (pageHeight == 0 || pageWidth == 0) {
+                pageHeight = scrollView.getHeight() - 150; // Subtract toolbar height
+                pageWidth = scrollView.getWidth() - 80; // Account for padding/margin
+                addNewPage(); // Add the first page
+            }
+        });
+
+        // Create the bottom toolbar
+        setupBottomToolbar();
+
+        // Main layout
+        FrameLayout mainLayout = new FrameLayout(this);
+        mainLayout.addView(scrollView);
+        mainLayout.addView(bottomToolbar); // Add toolbar to the main layout
+
+        setContentView(mainLayout);
+    }
+
+    private void addNewPage() {
+        Page page = new Page(this, pageWidth, pageHeight);
+        pagesContainer.addView(page.getPageLayout());
+        activePage = page; // Set the first page as active
+    }
+
+    private void setupBottomToolbar() {
+        bottomToolbar = new LinearLayout(this);
+        bottomToolbar.setOrientation(LinearLayout.HORIZONTAL);
+        bottomToolbar.setGravity(Gravity.CENTER_VERTICAL);
+        bottomToolbar.setBackgroundColor(Color.DKGRAY);
+        bottomToolbar.setPadding(20, 20, 20, 20);
+
+        FrameLayout.LayoutParams toolbarParams = new FrameLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                150
+        );
+        toolbarParams.gravity = Gravity.BOTTOM;
+        bottomToolbar.setLayoutParams(toolbarParams);
+
+        // Toggle button for drawing/typing mode
+        ImageButton toggleButton = new ImageButton(this);
+        toggleButton.setImageResource(android.R.drawable.ic_menu_edit);
+        toggleButton.setBackgroundColor(Color.LTGRAY);
+        toggleButton.setOnClickListener(v -> toggleDrawingMode(toggleButton));
+        bottomToolbar.addView(toggleButton);
+
+        // Save button
+        ImageButton saveButton = new ImageButton(this);
+        saveButton.setImageResource(android.R.drawable.ic_menu_save);
+        saveButton.setBackgroundColor(Color.LTGRAY);
+        saveButton.setOnClickListener(v -> saveAndReturn());
+        bottomToolbar.addView(saveButton);
+    }
+
+    private void toggleDrawingMode(ImageButton toggleButton) {
+        if (activePage != null) {
+            boolean isDrawingMode = activePage.toggleDrawingMode(toggleButton);
+            scrollView.setScrollingEnabled(!isDrawingMode);
+            if (isDrawingMode) {
+                hideKeyboard();
+            }
+        }
+    }
+
+    private void hideKeyboard() {
+        View view = this.getCurrentFocus();
+        if (view != null) {
+            InputMethodManager imm = (InputMethodManager) getSystemService(Activity.INPUT_METHOD_SERVICE);
+            imm.hideSoftInputFromWindow(view.getWindowToken(), 0);
+        }
+    }
+
+    private void saveAndReturn() {
+        if (pagesContainer.getChildCount() > 0) {
+            String noteFileName = "note_" + System.currentTimeMillis() + ".png";
+
+            // Save JSON data
+            saveAllPagesDataAsJSON(noteFileName);
+
+            Intent resultIntent = new Intent();
+            resultIntent.putExtra("noteFileName", noteFileName);
+            setResult(RESULT_OK, resultIntent);
+            finish();
+        }
+    }
+
+    private void saveAllPagesDataAsJSON(String bitmapFileName) {
+        try {
+            String jsonFileName = bitmapFileName.replace(".png", ".json");
+            File notesDir = new File(getFilesDir(), "saved_notes");
+            if (!notesDir.exists()) {
+                notesDir.mkdirs();
+            }
+
+            JSONArray pagesArray = new JSONArray();
+            for (int i = 0; i < pagesContainer.getChildCount(); i++) {
+                Page currentPage = (Page) pagesContainer.getChildAt(i).getTag();
+                JSONObject pageObject = new JSONObject();
+                pageObject.put("text", currentPage.editText.getText().toString());
+                pageObject.put("sketch", currentPage.sketchView.getSketchPaths());
+                pagesArray.put(pageObject);
+            }
+
+            JSONObject notesObject = new JSONObject();
+            notesObject.put("pages", pagesArray);
+
+            File jsonFile = new File(notesDir, jsonFileName);
+            try (FileWriter fileWriter = new FileWriter(jsonFile)) {
+                fileWriter.write(notesObject.toString());
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
+    private class Page {
+        private final FrameLayout pageLayout;
+        private final EditText editText;
+        private final ResizableSketchView sketchView;
+
+        public Page(Activity context, int width, int height) {
+            pageLayout = new FrameLayout(context);
+            pageLayout.setLayoutParams(new FrameLayout.LayoutParams(width, height));
+            pageLayout.setBackground(createPageBackground());
+
+            editText = new EditText(context);
+            editText.setLayoutParams(new FrameLayout.LayoutParams(
+                    ViewGroup.LayoutParams.MATCH_PARENT,
+                    ViewGroup.LayoutParams.MATCH_PARENT
+            ));
+            editText.setBackgroundColor(Color.TRANSPARENT);
+            editText.setTextColor(Color.BLACK);
+            editText.setTextSize(16);
+            editText.setGravity(Gravity.TOP); // Start typing from the top
+            editText.setHorizontallyScrolling(false);
+            editText.setSingleLine(false);
+
+            sketchView = new ResizableSketchView(context, width, height);
+            sketchView.setLayoutParams(new FrameLayout.LayoutParams(
+                    ViewGroup.LayoutParams.MATCH_PARENT,
+                    ViewGroup.LayoutParams.MATCH_PARENT
+            ));
+
+            pageLayout.addView(editText);
+            pageLayout.addView(sketchView);
+
+            // Enable pagination
+            editText.addTextChangedListener(new TextWatcher() {
+                @Override
+                public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
+
+                @Override
+                public void onTextChanged(CharSequence s, int start, int before, int count) {}
+
+                @Override
+                public void afterTextChanged(Editable s) {
+                    Layout layout = editText.getLayout();
+                    if (layout != null && layout.getHeight() > editText.getHeight()) {
+                        String overflowText = editText.getText().toString();
+                        int lastVisibleLine = layout.getLineForVertical(editText.getHeight());
+                        int overflowStart = layout.getLineStart(lastVisibleLine);
+                        String remainingText = overflowText.substring(overflowStart);
+
+                        editText.setText(overflowText.substring(0, overflowStart));
+                        addNewPage().editText.setText(remainingText);
+                    }
+                }
+            });
+        }
+
+        public FrameLayout getPageLayout() {
+            return pageLayout;
+        }
+
+        private GradientDrawable createPageBackground() {
+            GradientDrawable background = new GradientDrawable();
+            background.setColor(Color.WHITE);
+            background.setCornerRadius(20);
+            background.setStroke(2, Color.LTGRAY);
+            return background;
+        }
+    }
+
+    private static class ResizableSketchView extends View {
+        private final Paint paint;
+        private final Path path;
+
+        public ResizableSketchView(Activity context, int width, int height) {
+            super(context);
+            paint = new Paint();
+            paint.setColor(Color.BLUE);
+            paint.setStyle(Paint.Style.STROKE);
+            paint.setStrokeWidth(5);
+            paint.setAntiAlias(true);
+            path = new Path();
+        }
+
+        @Override
+        protected void onDraw(Canvas canvas) {
+            super.onDraw(canvas);
+            canvas.drawPath(path, paint);
+        }
+
+        public JSONArray getSketchPaths() {
+            JSONArray pathsArray = new JSONArray();
+            PathMeasure pathMeasure = new PathMeasure(path, false);
+            float[] point = new float[2];
+            for (float distance = 0; distance < pathMeasure.getLength(); distance += 10) {
+                pathMeasure.getPosTan(distance, point, null);
+                JSONObject pointObject = new JSONObject();
+                try {
+                    pointObject.put("x", point[0]);
+                    pointObject.put("y", point[1]);
+                    pathsArray.put(pointObject);
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+            }
+            return pathsArray;
+        }
+    }
+
+    private static class CustomScrollView extends ScrollView {
+        private boolean isScrollingEnabled = true;
+
+        public CustomScrollView(Activity context) {
+            super(context);
+        }
+
+        public void setScrollingEnabled(boolean enabled) {
+            isScrollingEnabled = enabled;
+        }
+
+        @Override
+        public boolean onTouchEvent(MotionEvent ev) {
+            return isScrollingEnabled && super.onTouchEvent(ev);
+        }
+
+        @Override
+        public boolean onInterceptTouchEvent(MotionEvent ev) {
+            return isScrollingEnabled && super.onInterceptTouchEvent(ev);
+        }
+    }
 }
+
