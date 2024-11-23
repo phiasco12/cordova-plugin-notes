@@ -6,6 +6,9 @@ import android.graphics.Color;
 import android.graphics.Paint;
 import android.graphics.Path;
 import android.os.Bundle;
+import android.text.Editable;
+import android.text.Layout;
+import android.text.TextWatcher;
 import android.view.MotionEvent;
 import android.view.View;
 import android.widget.EditText;
@@ -87,11 +90,11 @@ public class NoteEditActivity extends Activity {
             for (int i = 0; i < pagesArray.length(); i++) {
                 JSONObject pageJson = pagesArray.getJSONObject(i);
                 String text = pageJson.getString("text");
-                String drawingPath = pageJson.getString("drawingPath");
+                JSONArray sketchPaths = pageJson.getJSONArray("sketch");
 
                 Page page = new Page(this, pageWidth, pageHeight);
                 page.getEditText().setText(text);
-                page.getSketchView().loadPathData(drawingPath);
+                page.getSketchView().loadSketchPaths(sketchPaths); // Load sketch paths
                 pages.add(page); // Store Page object
                 pagesContainer.addView(page.getPageLayout());
             }
@@ -112,7 +115,7 @@ public class NoteEditActivity extends Activity {
             for (Page page : pages) {
                 JSONObject pageJson = new JSONObject();
                 pageJson.put("text", page.getEditText().getText().toString());
-                pageJson.put("drawingPath", page.getSketchView().getPathData());
+                pageJson.put("sketch", page.getSketchView().getSketchPaths());
                 pagesArray.put(pageJson);
             }
 
@@ -172,16 +175,23 @@ public class NoteEditActivity extends Activity {
         public ResizableSketchView(Activity context) {
             super(context);
             paint = new Paint();
+            paint.setColor(Color.BLUE);
+            paint.setStyle(Paint.Style.STROKE);
+            paint.setStrokeWidth(8);
+            paint.setAntiAlias(true);
+            paint.setStrokeCap(Paint.Cap.ROUND);
+
             path = new Path();
         }
 
-        public String getPathData() {
-            // Serialize drawing data
-            return "[Serialized Drawing Path]";
+        public JSONArray getSketchPaths() {
+            JSONArray pathsArray = new JSONArray();
+            // Serialize the path into points (implement logic here)
+            return pathsArray;
         }
 
-        public void loadPathData(String pathData) {
-            // Deserialize drawing data
+        public void loadSketchPaths(JSONArray sketchPaths) {
+            // Deserialize JSON array into path (implement logic here)
         }
 
         @Override
@@ -191,7 +201,19 @@ public class NoteEditActivity extends Activity {
 
         @Override
         public boolean onTouchEvent(MotionEvent event) {
-            // Handle drawing events
+            float x = event.getX();
+            float y = event.getY();
+
+            switch (event.getAction()) {
+                case MotionEvent.ACTION_DOWN:
+                    path.moveTo(x, y);
+                    break;
+                case MotionEvent.ACTION_MOVE:
+                    path.lineTo(x, y);
+                    break;
+            }
+
+            invalidate(); // Redraw the view
             return true;
         }
     }
