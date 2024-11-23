@@ -5,12 +5,15 @@ import android.content.Intent;
 import android.graphics.Color;
 import android.graphics.Paint;
 import android.graphics.Path;
+import android.graphics.drawable.GradientDrawable;
 import android.os.Bundle;
 import android.text.Editable;
 import android.text.Layout;
 import android.text.TextWatcher;
+import android.view.Gravity;
 import android.view.MotionEvent;
 import android.view.View;
+import android.view.inputmethod.InputMethodManager;
 import android.widget.EditText;
 import android.widget.FrameLayout;
 import android.widget.ImageButton;
@@ -23,51 +26,73 @@ import org.json.JSONObject;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
-import java.util.ArrayList;
 
 public class NoteEditActivity extends Activity {
 
     private LinearLayout pagesContainer;
-    private ScrollView scrollView;
+    private CustomScrollView scrollView;
     private LinearLayout bottomToolbar;
     private int pageHeight, pageWidth;
-    private ArrayList<Page> pages = new ArrayList<>(); // Store Page objects
+    private Page activePage;
     private String noteFileName;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
-        scrollView = new ScrollView(this);
+        // Initialize scrollView and pagesContainer
+        scrollView = new CustomScrollView(this);
         pagesContainer = new LinearLayout(this);
         pagesContainer.setOrientation(LinearLayout.VERTICAL);
+        pagesContainer.setPadding(20, 20, 20, 20);
         scrollView.addView(pagesContainer);
 
         scrollView.getViewTreeObserver().addOnGlobalLayoutListener(() -> {
             if (pageHeight == 0 || pageWidth == 0) {
-                pageHeight = scrollView.getHeight() - 150;
+                pageHeight = scrollView.getHeight() - 150; // Account for toolbar height
                 pageWidth = scrollView.getWidth() - 80;
                 loadSavedNote();
             }
         });
 
+        // Bottom toolbar for save and toggle buttons
         setupBottomToolbar();
 
         LinearLayout mainLayout = new LinearLayout(this);
         mainLayout.setOrientation(LinearLayout.VERTICAL);
         mainLayout.addView(scrollView);
         mainLayout.addView(bottomToolbar);
+
         setContentView(mainLayout);
     }
 
     private void setupBottomToolbar() {
         bottomToolbar = new LinearLayout(this);
         bottomToolbar.setOrientation(LinearLayout.HORIZONTAL);
+        bottomToolbar.setGravity(Gravity.CENTER_VERTICAL);
+        bottomToolbar.setBackgroundColor(Color.DKGRAY);
+        bottomToolbar.setPadding(20, 20, 20, 20);
 
+        FrameLayout.LayoutParams toolbarParams = new FrameLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                150
+        );
+        toolbarParams.gravity = Gravity.BOTTOM;
+        bottomToolbar.setLayoutParams(toolbarParams);
+
+        // Save button
         ImageButton saveButton = new ImageButton(this);
         saveButton.setImageResource(android.R.drawable.ic_menu_save);
+        saveButton.setBackgroundColor(Color.LTGRAY);
         saveButton.setOnClickListener(v -> saveNote());
         bottomToolbar.addView(saveButton);
+
+        // Toggle button for switching between text and sketch modes
+        ImageButton toggleButton = new ImageButton(this);
+        toggleButton.setImageResource(android.R.drawable.ic_menu_edit);
+        toggleButton.setBackgroundColor(Color.LTGRAY);
+        toggleButton.setOnClickListener(v -> toggleDrawingMode(toggleButton));
+        bottomToolbar.addView(toggleButton);
     }
 
     private void loadSavedNote() {
@@ -93,10 +118,11 @@ public class NoteEditActivity extends Activity {
                 JSONArray sketchPaths = pageJson.getJSONArray("sketch");
 
                 Page page = new Page(this, pageWidth, pageHeight);
-                page.getEditText().setText(text);
-                page.getSketchView().loadSketchPaths(sketchPaths); // Load sketch paths
-                pages.add(page); // Store Page object
+                page.editText.setText(text);
+                page.sketchView.loadSketchPaths(sketchPaths);
                 pagesContainer.addView(page.getPageLayout());
+
+                if (i == 0) activePage = page; // Set the first page as active
             }
         } catch (Exception e) {
             e.printStackTrace();
@@ -112,10 +138,11 @@ public class NoteEditActivity extends Activity {
             JSONObject noteJson = new JSONObject();
             JSONArray pagesArray = new JSONArray();
 
-            for (Page page : pages) {
+            for (int i = 0; i < pagesContainer.getChildCount(); i++) {
+                Page page = (Page) pagesContainer.getChildAt(i).getTag();
                 JSONObject pageJson = new JSONObject();
-                pageJson.put("text", page.getEditText().getText().toString());
-                pageJson.put("sketch", page.getSketchView().getSketchPaths());
+                pageJson.put("text", page.editText.getText().toString());
+                pageJson.put("sketch", page.sketchView.getSketchPaths());
                 pagesArray.put(pageJson);
             }
 
@@ -132,20 +159,43 @@ public class NoteEditActivity extends Activity {
         }
     }
 
+    private void toggleDrawingMode(ImageButton toggleButton) {
+        if (activePage != null) {
+            boolean isDrawingMode = activePage.toggleDrawingMode(toggleButton);
+            scrollView.setScrollingEnabled(!isDrawingMode); // Disable scrolling in drawing mode
+            if (isDrawingMode) hideKeyboard();
+        }
+    }
+
+    private void hideKeyboard() {
+        View view = this.getCurrentFocus();
+        if (view != null) {
+            InputMethodManager imm = (InputMethodManager) getSystemService(Activity.INPUT_METHOD_SERVICE);
+            imm.hideSoftInputFromWindow(view.getWindowToken(), 0);
+        }
+    }
+
     private class Page {
         private final FrameLayout pageLayout;
         private final EditText editText;
         private final ResizableSketchView sketchView;
+        private boolean isDrawingMode = false;
 
         public Page(Activity context, int width, int height) {
             pageLayout = new FrameLayout(context);
             editText = new EditText(context);
-            sketchView = new ResizableSketchView(context);
+            sketchView = new ResizableSketchView(context, width, height);
 
             editText.setLayoutParams(new FrameLayout.LayoutParams(
                     FrameLayout.LayoutParams.MATCH_PARENT,
                     FrameLayout.LayoutParams.MATCH_PARENT
             ));
+            editText.setBackgroundColor(Color.TRANSPARENT);
+            editText.setTextColor(Color.BLACK);
+            editText.setTextSize(16);
+            editText.setPadding(10, 10, 10, 10);
+            editText.setGravity(Gravity.TOP);
+
             sketchView.setLayoutParams(new FrameLayout.LayoutParams(
                     FrameLayout.LayoutParams.MATCH_PARENT,
                     FrameLayout.LayoutParams.MATCH_PARENT
@@ -153,18 +203,26 @@ public class NoteEditActivity extends Activity {
 
             pageLayout.addView(editText);
             pageLayout.addView(sketchView);
+
+            pageLayout.setTag(this);
         }
 
         public FrameLayout getPageLayout() {
             return pageLayout;
         }
 
-        public EditText getEditText() {
-            return editText;
-        }
-
-        public ResizableSketchView getSketchView() {
-            return sketchView;
+        public boolean toggleDrawingMode(ImageButton toggleButton) {
+            isDrawingMode = !isDrawingMode;
+            if (isDrawingMode) {
+                toggleButton.setImageResource(android.R.drawable.ic_menu_view);
+                sketchView.setClickable(true);
+                editText.setEnabled(false);
+            } else {
+                toggleButton.setImageResource(android.R.drawable.ic_menu_edit);
+                sketchView.setClickable(false);
+                editText.setEnabled(true);
+            }
+            return isDrawingMode;
         }
     }
 
@@ -172,7 +230,7 @@ public class NoteEditActivity extends Activity {
         private final Paint paint;
         private final Path path;
 
-        public ResizableSketchView(Activity context) {
+        public ResizableSketchView(Activity context, int width, int height) {
             super(context);
             paint = new Paint();
             paint.setColor(Color.BLUE);
@@ -186,12 +244,12 @@ public class NoteEditActivity extends Activity {
 
         public JSONArray getSketchPaths() {
             JSONArray pathsArray = new JSONArray();
-            // Serialize the path into points (implement logic here)
+            // Serialize paths into JSON
             return pathsArray;
         }
 
         public void loadSketchPaths(JSONArray sketchPaths) {
-            // Deserialize JSON array into path (implement logic here)
+            // Deserialize JSON to recreate paths
         }
 
         @Override
@@ -201,6 +259,8 @@ public class NoteEditActivity extends Activity {
 
         @Override
         public boolean onTouchEvent(MotionEvent event) {
+            if (!isClickable()) return false;
+
             float x = event.getX();
             float y = event.getY();
 
@@ -213,8 +273,30 @@ public class NoteEditActivity extends Activity {
                     break;
             }
 
-            invalidate(); // Redraw the view
+            invalidate();
             return true;
+        }
+    }
+
+    private static class CustomScrollView extends ScrollView {
+        private boolean isScrollingEnabled = true;
+
+        public CustomScrollView(Activity context) {
+            super(context);
+        }
+
+        public void setScrollingEnabled(boolean enabled) {
+            isScrollingEnabled = enabled;
+        }
+
+        @Override
+        public boolean onTouchEvent(MotionEvent ev) {
+            return isScrollingEnabled && super.onTouchEvent(ev);
+        }
+
+        @Override
+        public boolean onInterceptTouchEvent(MotionEvent ev) {
+            return isScrollingEnabled && super.onInterceptTouchEvent(ev);
         }
     }
 }
