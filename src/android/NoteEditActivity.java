@@ -27,6 +27,8 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 
+import android.view.ViewGroup;
+
 public class NoteEditActivity extends Activity {
 
     private LinearLayout pagesContainer;
