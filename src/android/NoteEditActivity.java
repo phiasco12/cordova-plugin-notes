@@ -219,6 +219,44 @@ public class NoteEditActivity extends Activity {
             editText.setHorizontallyScrolling(false);
             editText.setSingleLine(false);
 
+            editText.addTextChangedListener(new TextWatcher() {
+                private boolean isTextWatcherActive = true;
+
+                @Override
+                public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
+
+                @Override
+                public void onTextChanged(CharSequence s, int start, int before, int count) {}
+
+                @Override
+                public void afterTextChanged(Editable s) {
+                    if (!isTextWatcherActive || isLoading) return;
+                    editText.post(() -> checkForOverflow());
+                }
+
+                private void checkForOverflow() {
+                    Layout layout = editText.getLayout();
+                    if (layout != null && layout.getHeight() > editText.getHeight()) {
+                        isTextWatcherActive = false;
+
+                        String overflowText = editText.getText().toString();
+                        int lastVisibleLine = layout.getLineForVertical(editText.getHeight());
+                        int overflowStart = layout.getLineStart(lastVisibleLine);
+                        String visibleText = overflowText.substring(0, overflowStart);
+                        String remainingText = overflowText.substring(overflowStart);
+
+                        editText.setText(visibleText);
+
+                        Page newPage = new Page(NoteEditActivity.this, pageWidth, pageHeight);
+                        newPage.editText.setText(remainingText);
+                        pagesContainer.addView(newPage.pageLayout);
+                        activePage = newPage;
+
+                        isTextWatcherActive = true;
+                    }
+                }
+            });
+
             sketchView = new ResizableSketchView(context, width, height);
             sketchView.setLayoutParams(new FrameLayout.LayoutParams(
                     FrameLayout.LayoutParams.MATCH_PARENT,
@@ -253,7 +291,7 @@ public class NoteEditActivity extends Activity {
     private static class ResizableSketchView extends View {
         private final Paint paint;
         private final Path path;
-        private final ArrayList<ArrayList<Pair<Float, Float>>> strokes = new ArrayList<>();
+        private final ArrayList<ArrayList<Pair<Float, Float>>> strokes;
 
         public ResizableSketchView(Activity context, int width, int height) {
             super(context);
@@ -263,8 +301,8 @@ public class NoteEditActivity extends Activity {
             paint.setStrokeWidth(8);
             paint.setAntiAlias(true);
             paint.setStrokeCap(Paint.Cap.ROUND);
-
             path = new Path();
+            strokes = new ArrayList<>();
         }
 
         public JSONArray getSketchPaths() {
@@ -287,8 +325,8 @@ public class NoteEditActivity extends Activity {
         }
 
         public void loadSketchPaths(JSONArray sketchPaths) {
-            path.reset();
             strokes.clear();
+            path.reset();
             try {
                 for (int i = 0; i < sketchPaths.length(); i++) {
                     JSONArray strokeArray = sketchPaths.getJSONArray(i);
@@ -310,7 +348,7 @@ public class NoteEditActivity extends Activity {
         private void redrawPath() {
             path.reset();
             for (ArrayList<Pair<Float, Float>> stroke : strokes) {
-                if (stroke.size() > 0) {
+                if (!stroke.isEmpty()) {
                     Pair<Float, Float> firstPoint = stroke.get(0);
                     path.moveTo(firstPoint.first, firstPoint.second);
                     for (int i = 1; i < stroke.size(); i++) {
