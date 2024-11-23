@@ -1909,7 +1909,7 @@ private void setupBottomToolbar() {
     ImageButton placeholderButton = new ImageButton(this);
     placeholderButton.setImageResource(android.R.drawable.ic_menu_agenda); // Example icon
     placeholderButton.setBackgroundColor(Color.LTGRAY);
-    placeholderButton.setOnClickListener(v -> toggleFontSize());
+    placeholderButton.setOnClickListener(v -> changeSelectedTextFontSize());
     placeholderButton.setLayoutParams(buttonParams);
 
     // Add buttons to the toolbar
@@ -1923,15 +1923,49 @@ private void setupBottomToolbar() {
 
 
 
-private int currentFontSizeIndex = 0; // To keep track of the current font size
-private final float[] fontSizes = {16f, 20f, 24f}; // Available font sizes
+private void changeSelectedTextFontSize() {
+    if (activePage != null && activePage.editText != null) {
+        EditText editText = activePage.editText;
 
-private void toggleFontSize() {
-    if (activePage != null) {
-        currentFontSizeIndex = (currentFontSizeIndex + 1) % fontSizes.length; // Cycle through font sizes
-        activePage.editText.setTextSize(fontSizes[currentFontSizeIndex]); // Apply the new font size
+        int start = editText.getSelectionStart(); // Get selection start
+        int end = editText.getSelectionEnd(); // Get selection end
+
+        if (start != end) { // Ensure some text is selected
+            Editable editable = editText.getText();
+            SpannableStringBuilder spannable = new SpannableStringBuilder(editable);
+
+            // Toggle between font sizes (adjust as needed)
+            float[] fontSizes = {1.0f, 1.5f, 2.0f}; // Relative sizes
+            float currentSize = 1.0f; // Default size
+            RelativeSizeSpan[] spans = spannable.getSpans(start, end, RelativeSizeSpan.class);
+
+            if (spans.length > 0) {
+                currentSize = spans[0].getSizeChange(); // Get the current size
+                spannable.removeSpan(spans[0]); // Remove the current span
+            }
+
+            // Find the next size to apply
+            int nextSizeIndex = (findIndex(fontSizes, currentSize) + 1) % fontSizes.length;
+            float nextSize = fontSizes[nextSizeIndex];
+
+            // Apply the new size
+            spannable.setSpan(new RelativeSizeSpan(nextSize), start, end, 0);
+
+            editText.setText(spannable); // Set the modified text
+            editText.setSelection(start, end); // Restore the selection
+        }
     }
 }
+
+private int findIndex(float[] array, float value) {
+    for (int i = 0; i < array.length; i++) {
+        if (array[i] == value) {
+            return i;
+        }
+    }
+    return -1; // Default to the first index if not found
+}
+
 
 
 
