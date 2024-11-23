@@ -1769,6 +1769,11 @@ import java.io.FileWriter;
 import org.json.JSONArray;
 import org.json.JSONObject;
 
+
+
+import java.util.ArrayList;
+import android.util.Pair;
+
 public class NoteEditorActivity extends Activity {
 
     private LinearLayout pagesContainer; // The container for all pages
