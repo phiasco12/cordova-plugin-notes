@@ -44,6 +44,11 @@ public class NoteEditActivity extends Activity {
 
         // Initialize scrollView and pagesContainer
         scrollView = new CustomScrollView(this);
+        scrollView.setLayoutParams(new FrameLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.MATCH_PARENT
+        ));
+
         pagesContainer = new LinearLayout(this);
         pagesContainer.setOrientation(LinearLayout.VERTICAL);
         pagesContainer.setPadding(20, 20, 20, 20);
@@ -52,7 +57,7 @@ public class NoteEditActivity extends Activity {
         scrollView.getViewTreeObserver().addOnGlobalLayoutListener(() -> {
             if (pageHeight == 0 || pageWidth == 0) {
                 pageHeight = scrollView.getHeight() - 150; // Account for toolbar height
-                pageWidth = scrollView.getWidth() - 80;
+                pageWidth = scrollView.getWidth() - 80; // Screen width minus padding
                 loadSavedNote();
             }
         });
@@ -60,8 +65,7 @@ public class NoteEditActivity extends Activity {
         // Bottom toolbar for save and toggle buttons
         setupBottomToolbar();
 
-        LinearLayout mainLayout = new LinearLayout(this);
-        mainLayout.setOrientation(LinearLayout.VERTICAL);
+        FrameLayout mainLayout = new FrameLayout(this);
         mainLayout.addView(scrollView);
         mainLayout.addView(bottomToolbar);
 
@@ -185,9 +189,20 @@ public class NoteEditActivity extends Activity {
 
         public Page(Activity context, int width, int height) {
             pageLayout = new FrameLayout(context);
-            editText = new EditText(context);
-            sketchView = new ResizableSketchView(context, width, height);
+            FrameLayout.LayoutParams pageParams = new FrameLayout.LayoutParams(
+                    width,
+                    height
+            );
+            pageParams.setMargins(20, 20, 20, 20);
+            pageLayout.setLayoutParams(pageParams);
 
+            GradientDrawable background = new GradientDrawable();
+            background.setColor(Color.WHITE);
+            background.setCornerRadius(30);
+            background.setStroke(5, Color.LTGRAY);
+            pageLayout.setBackground(background);
+
+            editText = new EditText(context);
             editText.setLayoutParams(new FrameLayout.LayoutParams(
                     FrameLayout.LayoutParams.MATCH_PARENT,
                     FrameLayout.LayoutParams.MATCH_PARENT
@@ -198,14 +213,15 @@ public class NoteEditActivity extends Activity {
             editText.setPadding(10, 10, 10, 10);
             editText.setGravity(Gravity.TOP);
 
+            sketchView = new ResizableSketchView(context, width, height);
             sketchView.setLayoutParams(new FrameLayout.LayoutParams(
                     FrameLayout.LayoutParams.MATCH_PARENT,
                     FrameLayout.LayoutParams.MATCH_PARENT
             ));
+            sketchView.setBackgroundColor(Color.TRANSPARENT);
 
             pageLayout.addView(editText);
             pageLayout.addView(sketchView);
-
             pageLayout.setTag(this);
         }
 
