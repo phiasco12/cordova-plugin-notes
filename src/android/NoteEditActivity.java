@@ -5,7 +5,6 @@ import android.content.Intent;
 import android.graphics.Color;
 import android.graphics.Paint;
 import android.graphics.Path;
-import android.graphics.PathMeasure;
 import android.graphics.drawable.GradientDrawable;
 import android.os.Bundle;
 import android.text.Editable;
@@ -30,8 +29,6 @@ import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.util.ArrayList;
 
-import android.view.ViewGroup;
-
 public class NoteEditActivity extends Activity {
 
     private LinearLayout pagesContainer;
@@ -40,7 +37,7 @@ public class NoteEditActivity extends Activity {
     private int pageHeight, pageWidth;
     private Page activePage;
     private String noteFileName;
-    private boolean isLoading = false; // Flag to differentiate loading vs typing
+    private boolean isLoading = false;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -49,10 +46,9 @@ public class NoteEditActivity extends Activity {
         // Initialize scrollView and pagesContainer
         scrollView = new CustomScrollView(this);
         scrollView.setLayoutParams(new FrameLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT,
-                ViewGroup.LayoutParams.MATCH_PARENT
+                FrameLayout.LayoutParams.MATCH_PARENT,
+                FrameLayout.LayoutParams.MATCH_PARENT
         ));
-
         pagesContainer = new LinearLayout(this);
         pagesContainer.setOrientation(LinearLayout.VERTICAL);
         pagesContainer.setPadding(20, 20, 20, 20);
@@ -61,7 +57,7 @@ public class NoteEditActivity extends Activity {
         scrollView.getViewTreeObserver().addOnGlobalLayoutListener(() -> {
             if (pageHeight == 0 || pageWidth == 0) {
                 pageHeight = scrollView.getHeight() - 150; // Account for toolbar height
-                pageWidth = scrollView.getWidth() - 80; // Account for padding
+                pageWidth = scrollView.getWidth() - 80; // Account for padding/margin
                 loadSavedNote();
             }
         });
@@ -84,8 +80,8 @@ public class NoteEditActivity extends Activity {
         bottomToolbar.setPadding(20, 20, 20, 20);
 
         FrameLayout.LayoutParams toolbarParams = new FrameLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT,
-                150
+                FrameLayout.LayoutParams.MATCH_PARENT,
+                150 // Fixed toolbar height
         );
         toolbarParams.gravity = Gravity.BOTTOM;
         bottomToolbar.setLayoutParams(toolbarParams);
@@ -106,7 +102,7 @@ public class NoteEditActivity extends Activity {
     }
 
     private void loadSavedNote() {
-        isLoading = true; // Set flag to prevent pagination during loading
+        isLoading = true; // Prevent pagination during loading
         noteFileName = getIntent().getStringExtra("noteFileName");
         if (noteFileName == null) return;
 
@@ -138,7 +134,7 @@ public class NoteEditActivity extends Activity {
         } catch (Exception e) {
             e.printStackTrace();
         } finally {
-            isLoading = false; // Reset flag after loading completes
+            isLoading = false; // Allow pagination after loading completes
         }
     }
 
@@ -193,7 +189,6 @@ public class NoteEditActivity extends Activity {
         private final EditText editText;
         private final ResizableSketchView sketchView;
         private boolean isDrawingMode = false;
-        private boolean isTextWatcherActive = true;
 
         public Page(Activity context, int width, int height) {
             pageLayout = new FrameLayout(context);
@@ -201,14 +196,15 @@ public class NoteEditActivity extends Activity {
                     width,
                     height
             );
-            pageParams.setMargins(20, 20, 20, 20);
+            pageParams.setMargins(20, 20, 20, 20); // Margins between pages
             pageLayout.setLayoutParams(pageParams);
 
-            GradientDrawable background = new GradientDrawable();
-            background.setColor(Color.WHITE);
-            background.setCornerRadius(30);
-            background.setStroke(5, Color.LTGRAY);
-            pageLayout.setBackground(background);
+            // Background with rounded corners
+            GradientDrawable pageBackground = new GradientDrawable();
+            pageBackground.setColor(Color.WHITE);
+            pageBackground.setCornerRadius(30);
+            pageBackground.setStroke(5, Color.LTGRAY);
+            pageLayout.setBackground(pageBackground);
 
             editText = new EditText(context);
             editText.setLayoutParams(new FrameLayout.LayoutParams(
@@ -230,28 +226,6 @@ public class NoteEditActivity extends Activity {
             ));
             sketchView.setBackgroundColor(Color.TRANSPARENT);
 
-            // Monitor text changes to handle overflow and create new pages
-            editText.addTextChangedListener(new TextWatcher() {
-                @Override
-                public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
-
-                @Override
-                public void onTextChanged(CharSequence s, int start, int before, int count) {}
-
-                @Override
-                public void afterTextChanged(Editable s) {
-                    if (!isTextWatcherActive || isLoading) return; // Avoid feedback loop
-                    editText.post(() -> checkForOverflow());
-                }
-            });
-
-            // Set focus listener to track the active page
-            editText.setOnFocusChangeListener((v, hasFocus) -> {
-                if (hasFocus) {
-                    activePage = this;
-                }
-            });
-
             pageLayout.addView(editText);
             pageLayout.addView(sketchView);
             pageLayout.setTag(this);
@@ -261,43 +235,16 @@ public class NoteEditActivity extends Activity {
             return pageLayout;
         }
 
-        private void checkForOverflow() {
-            Layout layout = editText.getLayout();
-            if (layout != null && layout.getHeight() > editText.getHeight()) {
-                // Disable the TextWatcher temporarily
-                isTextWatcherActive = false;
-
-                // If the text exceeds the current page, create a new page
-                String overflowText = editText.getText().toString();
-                int lastVisibleLine = layout.getLineForVertical(editText.getHeight());
-                int overflowStart = layout.getLineStart(lastVisibleLine);
-                String visibleText = overflowText.substring(0, overflowStart);
-                String remainingText = overflowText.substring(overflowStart);
-
-                // Update the current page with visible text
-                editText.setText(visibleText);
-
-                // Create a new page and set the remaining text
-                Page newPage = new Page(NoteEditActivity.this, pageWidth, pageHeight);
-                newPage.editText.setText(remainingText);
-                pagesContainer.addView(newPage.getPageLayout());
-
-                // Set focus on the new page's EditText
-                newPage.editText.requestFocus();
-                activePage = newPage;
-
-                // Re-enable the TextWatcher
-                isTextWatcherActive = true;
-            }
-        }
-
         public boolean toggleDrawingMode(ImageButton toggleButton) {
             isDrawingMode = !isDrawingMode;
-            toggleButton.setImageResource(isDrawingMode ? android.R.drawable.ic_menu_view : android.R.drawable.ic_menu_edit);
-            sketchView.setClickable(isDrawingMode);
-            editText.setEnabled(!isDrawingMode);
             if (isDrawingMode) {
-                hideKeyboard();
+                toggleButton.setImageResource(android.R.drawable.ic_menu_view);
+                sketchView.setClickable(true);
+                editText.setEnabled(false);
+            } else {
+                toggleButton.setImageResource(android.R.drawable.ic_menu_edit);
+                sketchView.setClickable(false);
+                editText.setEnabled(true);
             }
             return isDrawingMode;
         }
@@ -307,7 +254,6 @@ public class NoteEditActivity extends Activity {
         private final Paint paint;
         private final Path path;
         private final ArrayList<ArrayList<Pair<Float, Float>>> strokes = new ArrayList<>();
-        private ArrayList<Pair<Float, Float>> currentStroke;
 
         public ResizableSketchView(Activity context, int width, int height) {
             super(context);
@@ -317,6 +263,7 @@ public class NoteEditActivity extends Activity {
             paint.setStrokeWidth(8);
             paint.setAntiAlias(true);
             paint.setStrokeCap(Paint.Cap.ROUND);
+
             path = new Path();
         }
 
@@ -389,17 +336,13 @@ public class NoteEditActivity extends Activity {
 
             switch (event.getAction()) {
                 case MotionEvent.ACTION_DOWN:
-                    currentStroke = new ArrayList<>();
-                    currentStroke.add(new Pair<>(x, y));
-                    strokes.add(currentStroke);
+                    ArrayList<Pair<Float, Float>> newStroke = new ArrayList<>();
+                    newStroke.add(new Pair<>(x, y));
+                    strokes.add(newStroke);
                     path.moveTo(x, y);
                     break;
                 case MotionEvent.ACTION_MOVE:
-                    currentStroke.add(new Pair<>(x, y));
-                    path.lineTo(x, y);
-                    break;
-                case MotionEvent.ACTION_UP:
-                    currentStroke.add(new Pair<>(x, y));
+                    strokes.get(strokes.size() - 1).add(new Pair<>(x, y));
                     path.lineTo(x, y);
                     break;
             }
