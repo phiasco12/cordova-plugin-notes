@@ -242,6 +242,10 @@ public class NoteEditActivity extends Activity {
             pageLayout.setTag(this);
         }
 
+        public FrameLayout getPageLayout() {
+            return pageLayout;
+        }
+
         private void checkForOverflow() {
             Layout layout = editText.getLayout();
             if (layout != null && layout.getHeight() > editText.getHeight()) {
