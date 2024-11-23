@@ -37,6 +37,7 @@ public class NoteEditActivity extends Activity {
     private int pageHeight, pageWidth;
     private Page activePage;
     private String noteFileName;
+    private boolean isLoading = false; // Flag to differentiate loading vs typing
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -57,7 +58,7 @@ public class NoteEditActivity extends Activity {
         scrollView.getViewTreeObserver().addOnGlobalLayoutListener(() -> {
             if (pageHeight == 0 || pageWidth == 0) {
                 pageHeight = scrollView.getHeight() - 150; // Account for toolbar height
-                pageWidth = scrollView.getWidth() - 80; // Screen width minus padding
+                pageWidth = scrollView.getWidth() - 80; // Account for padding
                 loadSavedNote();
             }
         });
@@ -102,6 +103,7 @@ public class NoteEditActivity extends Activity {
     }
 
     private void loadSavedNote() {
+        isLoading = true; // Set flag to prevent pagination during loading
         noteFileName = getIntent().getStringExtra("noteFileName");
         if (noteFileName == null) return;
 
@@ -132,6 +134,8 @@ public class NoteEditActivity extends Activity {
             }
         } catch (Exception e) {
             e.printStackTrace();
+        } finally {
+            isLoading = false; // Reset flag after loading completes
         }
     }
 
@@ -220,7 +224,6 @@ public class NoteEditActivity extends Activity {
             ));
             sketchView.setBackgroundColor(Color.TRANSPARENT);
 
-            // Handle text overflow for pagination
             editText.addTextChangedListener(new TextWatcher() {
                 @Override
                 public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
@@ -230,7 +233,7 @@ public class NoteEditActivity extends Activity {
 
                 @Override
                 public void afterTextChanged(Editable s) {
-                    editText.post(() -> checkForOverflow());
+                    if (!isLoading) editText.post(() -> checkForOverflow());
                 }
             });
 
@@ -253,13 +256,10 @@ public class NoteEditActivity extends Activity {
                 Page newPage = new Page(NoteEditActivity.this, pageWidth, pageHeight);
                 newPage.editText.setText(remainingText);
                 pagesContainer.addView(newPage.getPageLayout());
+
                 newPage.editText.requestFocus();
                 activePage = newPage;
             }
-        }
-
-        public FrameLayout getPageLayout() {
-            return pageLayout;
         }
 
         public boolean toggleDrawingMode(ImageButton toggleButton) {
@@ -288,12 +288,12 @@ public class NoteEditActivity extends Activity {
 
         public JSONArray getSketchPaths() {
             JSONArray pathsArray = new JSONArray();
-            // Serialize path to JSON
+            // Serialize paths into JSON
             return pathsArray;
         }
 
         public void loadSketchPaths(JSONArray sketchPaths) {
-            // Deserialize and reconstruct paths from JSON
+            // Deserialize JSON to reconstruct paths
         }
 
         @Override
