@@ -116,8 +116,6 @@ public class NoteEditActivity extends Activity {
 
 
 
-import android.text.SpannableStringBuilder;
-import android.text.style.RelativeSizeSpan;
 
 // Inside the class
 private void setupBottomToolbar() {
