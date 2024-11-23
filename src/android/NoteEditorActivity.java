@@ -1762,12 +1762,12 @@ import android.widget.ScrollView;
 
 import androidx.annotation.NonNull;
 
-import org.json.JSONArray;
-import org.json.JSONObject;
-
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.FileWriter;
+
+import org.json.JSONArray;
+import org.json.JSONObject;
 
 public class NoteEditorActivity extends Activity {
 
@@ -1960,6 +1960,7 @@ public class NoteEditorActivity extends Activity {
         private final EditText editText; // Text input for the page
         private final ResizableSketchView sketchView; // Sketch area for the page
         private boolean isDrawingMode = false; // Track text/drawing mode
+        private boolean isTextWatcherActive = true; // Prevent feedback loop in TextWatcher
 
         public Page(Activity context, int width, int height) {
             // Create the page layout
@@ -1970,6 +1971,10 @@ public class NoteEditorActivity extends Activity {
             );
             pageParams.setMargins(20, 20, 20, 20); // Margins between pages
             pageLayout.setLayoutParams(pageParams);
+
+            // Background with rounded corners
+            GradientDrawable pageBackground = createPageBackground();
+            pageLayout.setBackground(pageBackground);
 
             // Create the EditText for typing
             editText = new EditText(context);
@@ -1992,6 +1997,21 @@ public class NoteEditorActivity extends Activity {
                 }
             });
 
+            // Monitor text changes to handle overflow and create new pages
+            editText.addTextChangedListener(new TextWatcher() {
+                @Override
+                public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
+
+                @Override
+                public void onTextChanged(CharSequence s, int start, int before, int count) {}
+
+                @Override
+                public void afterTextChanged(Editable s) {
+                    if (!isTextWatcherActive) return; // Avoid feedback loop
+                    editText.post(() -> checkForOverflow());
+                }
+            });
+
             // Create the sketch view for drawing
             sketchView = new ResizableSketchView(context, width, height);
             sketchView.setLayoutParams(new FrameLayout.LayoutParams(
@@ -2004,7 +2024,7 @@ public class NoteEditorActivity extends Activity {
             pageLayout.addView(editText);
             pageLayout.addView(sketchView);
 
-            // Tag the page layout for easy access
+            // Tag the page layout for easy access during JSON saving
             pageLayout.setTag(this);
         }
 
@@ -2014,9 +2034,51 @@ public class NoteEditorActivity extends Activity {
 
         public boolean toggleDrawingMode(ImageButton toggleButton) {
             isDrawingMode = !isDrawingMode;
-            sketchView.setClickable(isDrawingMode); // Toggle drawing mode
-            toggleButton.setImageResource(isDrawingMode ? android.R.drawable.ic_menu_view : android.R.drawable.ic_menu_edit);
-            return isDrawingMode;
+            if (isDrawingMode) {
+                toggleButton.setImageResource(android.R.drawable.ic_menu_view);
+                sketchView.setClickable(true); // Enable drawing
+            } else {
+                toggleButton.setImageResource(android.R.drawable.ic_menu_edit);
+                sketchView.setClickable(false); // Make sketch click-through
+            }
+            return isDrawingMode; // Return the current mode
+        }
+
+        private void checkForOverflow() {
+            Layout layout = editText.getLayout();
+            if (layout != null && layout.getHeight() > editText.getHeight()) {
+                // Disable the TextWatcher temporarily
+                isTextWatcherActive = false;
+
+                // If the text exceeds the current page, create a new page
+                String overflowText = editText.getText().toString();
+                int lastVisibleLine = layout.getLineForVertical(editText.getHeight());
+                int overflowStart = layout.getLineStart(lastVisibleLine);
+                String visibleText = overflowText.substring(0, overflowStart);
+                String remainingText = overflowText.substring(overflowStart);
+
+                // Update the current page with visible text
+                editText.setText(visibleText);
+
+                // Create a new page and set the remaining text
+                Page newPage = new Page(NoteEditorActivity.this, pageWidth, pageHeight);
+                newPage.editText.setText(remainingText);
+                pagesContainer.addView(newPage.getPageLayout());
+
+                // Set focus on the new page's EditText
+                newPage.editText.requestFocus();
+
+                // Re-enable the TextWatcher
+                isTextWatcherActive = true;
+            }
+        }
+
+        private GradientDrawable createPageBackground() {
+            GradientDrawable background = new GradientDrawable();
+            background.setColor(Color.WHITE); // Set the page background color
+            background.setCornerRadius(30); // Rounded corners
+            background.setStroke(5, Color.LTGRAY); // Add a border
+            return background;
         }
     }
 
@@ -2044,26 +2106,9 @@ public class NoteEditorActivity extends Activity {
             canvas.drawPath(path, paint);
         }
 
-        public JSONArray getSketchPaths() {
-            JSONArray pathsArray = new JSONArray();
-
-            // For each path, extract the points and store them in the array
-            // For simplicity, we use dummy data
-            try {
-                JSONObject dummyPoint = new JSONObject();
-                dummyPoint.put("x", 0);
-                dummyPoint.put("y", 0);
-                pathsArray.put(dummyPoint);
-            } catch (Exception e) {
-                e.printStackTrace();
-            }
-
-            return pathsArray;
-        }
-
         @Override
         public boolean onTouchEvent(MotionEvent event) {
-            if (!isClickable()) return false;
+            if (!isClickable()) return false; // Make the sketch click-through in typing mode
 
             float x = event.getX();
             float y = event.getY();
@@ -2075,12 +2120,26 @@ public class NoteEditorActivity extends Activity {
                 case MotionEvent.ACTION_MOVE:
                     path.lineTo(x, y);
                     break;
-                case MotionEvent.ACTION_UP:
-                    break;
             }
 
-            invalidate();
+            invalidate(); // Redraw the view
             return true;
+        }
+
+        public JSONArray getSketchPaths() {
+            JSONArray pathsArray = new JSONArray();
+
+            // Example: Extract path points (replace this with actual logic if necessary)
+            try {
+                JSONObject dummyPoint = new JSONObject();
+                dummyPoint.put("x", 0);
+                dummyPoint.put("y", 0);
+                pathsArray.put(dummyPoint);
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+
+            return pathsArray;
         }
     }
 
