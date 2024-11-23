@@ -1774,6 +1774,11 @@ import org.json.JSONObject;
 import java.util.ArrayList;
 import android.util.Pair;
 
+
+import android.text.SpannableStringBuilder;
+import android.text.style.RelativeSizeSpan;
+
+
 public class NoteEditorActivity extends Activity {
 
     private LinearLayout pagesContainer; // The container for all pages
