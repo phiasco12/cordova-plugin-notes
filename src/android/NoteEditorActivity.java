@@ -1905,10 +1905,11 @@ private void setupBottomToolbar() {
     toggleSketchButton.setOnClickListener(v -> toggleDrawingMode(toggleSketchButton));
     toggleSketchButton.setLayoutParams(buttonParams);
 
-    // Extra button for future use (optional, placeholder example)
+    // Placeholder Button: Change Font Size
     ImageButton placeholderButton = new ImageButton(this);
-    placeholderButton.setImageResource(android.R.drawable.ic_menu_help); // Example icon
+    placeholderButton.setImageResource(android.R.drawable.ic_menu_agenda); // Example icon
     placeholderButton.setBackgroundColor(Color.LTGRAY);
+    placeholderButton.setOnClickListener(v -> toggleFontSize());
     placeholderButton.setLayoutParams(buttonParams);
 
     // Add buttons to the toolbar
@@ -1922,7 +1923,15 @@ private void setupBottomToolbar() {
 
 
 
+private int currentFontSizeIndex = 0; // To keep track of the current font size
+private final float[] fontSizes = {16f, 20f, 24f}; // Available font sizes
 
+private void toggleFontSize() {
+    if (activePage != null) {
+        currentFontSizeIndex = (currentFontSizeIndex + 1) % fontSizes.length; // Cycle through font sizes
+        activePage.editText.setTextSize(fontSizes[currentFontSizeIndex]); // Apply the new font size
+    }
+}
 
 
 
