@@ -220,9 +220,42 @@ public class NoteEditActivity extends Activity {
             ));
             sketchView.setBackgroundColor(Color.TRANSPARENT);
 
+            // Handle text overflow for pagination
+            editText.addTextChangedListener(new TextWatcher() {
+                @Override
+                public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
+
+                @Override
+                public void onTextChanged(CharSequence s, int start, int before, int count) {}
+
+                @Override
+                public void afterTextChanged(Editable s) {
+                    editText.post(() -> checkForOverflow());
+                }
+            });
+
             pageLayout.addView(editText);
             pageLayout.addView(sketchView);
             pageLayout.setTag(this);
+        }
+
+        private void checkForOverflow() {
+            Layout layout = editText.getLayout();
+            if (layout != null && layout.getHeight() > editText.getHeight()) {
+                String overflowText = editText.getText().toString();
+                int lastVisibleLine = layout.getLineForVertical(editText.getHeight());
+                int overflowStart = layout.getLineStart(lastVisibleLine);
+                String visibleText = overflowText.substring(0, overflowStart);
+                String remainingText = overflowText.substring(overflowStart);
+
+                editText.setText(visibleText);
+
+                Page newPage = new Page(NoteEditActivity.this, pageWidth, pageHeight);
+                newPage.editText.setText(remainingText);
+                pagesContainer.addView(newPage.getPageLayout());
+                newPage.editText.requestFocus();
+                activePage = newPage;
+            }
         }
 
         public FrameLayout getPageLayout() {
@@ -231,15 +264,9 @@ public class NoteEditActivity extends Activity {
 
         public boolean toggleDrawingMode(ImageButton toggleButton) {
             isDrawingMode = !isDrawingMode;
-            if (isDrawingMode) {
-                toggleButton.setImageResource(android.R.drawable.ic_menu_view);
-                sketchView.setClickable(true);
-                editText.setEnabled(false);
-            } else {
-                toggleButton.setImageResource(android.R.drawable.ic_menu_edit);
-                sketchView.setClickable(false);
-                editText.setEnabled(true);
-            }
+            toggleButton.setImageResource(isDrawingMode ? android.R.drawable.ic_menu_view : android.R.drawable.ic_menu_edit);
+            sketchView.setClickable(isDrawingMode);
+            editText.setEnabled(!isDrawingMode);
             return isDrawingMode;
         }
     }
@@ -256,18 +283,17 @@ public class NoteEditActivity extends Activity {
             paint.setStrokeWidth(8);
             paint.setAntiAlias(true);
             paint.setStrokeCap(Paint.Cap.ROUND);
-
             path = new Path();
         }
 
         public JSONArray getSketchPaths() {
             JSONArray pathsArray = new JSONArray();
-            // Serialize paths into JSON
+            // Serialize path to JSON
             return pathsArray;
         }
 
         public void loadSketchPaths(JSONArray sketchPaths) {
-            // Deserialize JSON to recreate paths
+            // Deserialize and reconstruct paths from JSON
         }
 
         @Override
