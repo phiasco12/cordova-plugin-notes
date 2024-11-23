@@ -5,11 +5,13 @@ import android.content.Intent;
 import android.graphics.Color;
 import android.graphics.Paint;
 import android.graphics.Path;
+import android.graphics.PathMeasure;
 import android.graphics.drawable.GradientDrawable;
 import android.os.Bundle;
 import android.text.Editable;
 import android.text.Layout;
 import android.text.TextWatcher;
+import android.util.Pair;
 import android.view.Gravity;
 import android.view.MotionEvent;
 import android.view.View;
@@ -26,6 +28,7 @@ import org.json.JSONObject;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
+import java.util.ArrayList;
 
 import android.view.ViewGroup;
 
@@ -190,6 +193,7 @@ public class NoteEditActivity extends Activity {
         private final EditText editText;
         private final ResizableSketchView sketchView;
         private boolean isDrawingMode = false;
+        private boolean isTextWatcherActive = true;
 
         public Page(Activity context, int width, int height) {
             pageLayout = new FrameLayout(context);
@@ -216,6 +220,8 @@ public class NoteEditActivity extends Activity {
             editText.setTextSize(16);
             editText.setPadding(10, 10, 10, 10);
             editText.setGravity(Gravity.TOP);
+            editText.setHorizontallyScrolling(false);
+            editText.setSingleLine(false);
 
             sketchView = new ResizableSketchView(context, width, height);
             sketchView.setLayoutParams(new FrameLayout.LayoutParams(
@@ -224,6 +230,7 @@ public class NoteEditActivity extends Activity {
             ));
             sketchView.setBackgroundColor(Color.TRANSPARENT);
 
+            // Monitor text changes to handle overflow and create new pages
             editText.addTextChangedListener(new TextWatcher() {
                 @Override
                 public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
@@ -233,7 +240,15 @@ public class NoteEditActivity extends Activity {
 
                 @Override
                 public void afterTextChanged(Editable s) {
-                    if (!isLoading) editText.post(() -> checkForOverflow());
+                    if (!isTextWatcherActive || isLoading) return; // Avoid feedback loop
+                    editText.post(() -> checkForOverflow());
+                }
+            });
+
+            // Set focus listener to track the active page
+            editText.setOnFocusChangeListener((v, hasFocus) -> {
+                if (hasFocus) {
+                    activePage = this;
                 }
             });
 
@@ -249,20 +264,30 @@ public class NoteEditActivity extends Activity {
         private void checkForOverflow() {
             Layout layout = editText.getLayout();
             if (layout != null && layout.getHeight() > editText.getHeight()) {
+                // Disable the TextWatcher temporarily
+                isTextWatcherActive = false;
+
+                // If the text exceeds the current page, create a new page
                 String overflowText = editText.getText().toString();
                 int lastVisibleLine = layout.getLineForVertical(editText.getHeight());
                 int overflowStart = layout.getLineStart(lastVisibleLine);
                 String visibleText = overflowText.substring(0, overflowStart);
                 String remainingText = overflowText.substring(overflowStart);
 
+                // Update the current page with visible text
                 editText.setText(visibleText);
 
+                // Create a new page and set the remaining text
                 Page newPage = new Page(NoteEditActivity.this, pageWidth, pageHeight);
                 newPage.editText.setText(remainingText);
                 pagesContainer.addView(newPage.getPageLayout());
 
+                // Set focus on the new page's EditText
                 newPage.editText.requestFocus();
                 activePage = newPage;
+
+                // Re-enable the TextWatcher
+                isTextWatcherActive = true;
             }
         }
 
@@ -271,6 +296,9 @@ public class NoteEditActivity extends Activity {
             toggleButton.setImageResource(isDrawingMode ? android.R.drawable.ic_menu_view : android.R.drawable.ic_menu_edit);
             sketchView.setClickable(isDrawingMode);
             editText.setEnabled(!isDrawingMode);
+            if (isDrawingMode) {
+                hideKeyboard();
+            }
             return isDrawingMode;
         }
     }
@@ -278,6 +306,8 @@ public class NoteEditActivity extends Activity {
     private static class ResizableSketchView extends View {
         private final Paint paint;
         private final Path path;
+        private final ArrayList<ArrayList<Pair<Float, Float>>> strokes = new ArrayList<>();
+        private ArrayList<Pair<Float, Float>> currentStroke;
 
         public ResizableSketchView(Activity context, int width, int height) {
             super(context);
@@ -291,13 +321,58 @@ public class NoteEditActivity extends Activity {
         }
 
         public JSONArray getSketchPaths() {
-            JSONArray pathsArray = new JSONArray();
-            // Serialize paths into JSON
-            return pathsArray;
+            JSONArray strokesArray = new JSONArray();
+            try {
+                for (ArrayList<Pair<Float, Float>> stroke : strokes) {
+                    JSONArray strokeArray = new JSONArray();
+                    for (Pair<Float, Float> point : stroke) {
+                        JSONObject pointObject = new JSONObject();
+                        pointObject.put("x", point.first);
+                        pointObject.put("y", point.second);
+                        strokeArray.put(pointObject);
+                    }
+                    strokesArray.put(strokeArray);
+                }
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+            return strokesArray;
         }
 
         public void loadSketchPaths(JSONArray sketchPaths) {
-            // Deserialize JSON to reconstruct paths
+            path.reset();
+            strokes.clear();
+            try {
+                for (int i = 0; i < sketchPaths.length(); i++) {
+                    JSONArray strokeArray = sketchPaths.getJSONArray(i);
+                    ArrayList<Pair<Float, Float>> stroke = new ArrayList<>();
+                    for (int j = 0; j < strokeArray.length(); j++) {
+                        JSONObject pointObject = strokeArray.getJSONObject(j);
+                        float x = (float) pointObject.getDouble("x");
+                        float y = (float) pointObject.getDouble("y");
+                        stroke.add(new Pair<>(x, y));
+                    }
+                    strokes.add(stroke);
+                }
+                redrawPath();
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        }
+
+        private void redrawPath() {
+            path.reset();
+            for (ArrayList<Pair<Float, Float>> stroke : strokes) {
+                if (stroke.size() > 0) {
+                    Pair<Float, Float> firstPoint = stroke.get(0);
+                    path.moveTo(firstPoint.first, firstPoint.second);
+                    for (int i = 1; i < stroke.size(); i++) {
+                        Pair<Float, Float> point = stroke.get(i);
+                        path.lineTo(point.first, point.second);
+                    }
+                }
+            }
+            invalidate();
         }
 
         @Override
@@ -314,9 +389,17 @@ public class NoteEditActivity extends Activity {
 
             switch (event.getAction()) {
                 case MotionEvent.ACTION_DOWN:
+                    currentStroke = new ArrayList<>();
+                    currentStroke.add(new Pair<>(x, y));
+                    strokes.add(currentStroke);
                     path.moveTo(x, y);
                     break;
                 case MotionEvent.ACTION_MOVE:
+                    currentStroke.add(new Pair<>(x, y));
+                    path.lineTo(x, y);
+                    break;
+                case MotionEvent.ACTION_UP:
+                    currentStroke.add(new Pair<>(x, y));
                     path.lineTo(x, y);
                     break;
             }
