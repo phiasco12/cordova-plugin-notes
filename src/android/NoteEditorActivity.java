@@ -1912,7 +1912,7 @@ public class NoteEditorActivity extends Activity {
 
 private void saveAndReturn() {
     if (pagesContainer.getChildCount() > 0) {
-        // Save the JSON file for all pages
+        // Prepare directory and file names
         String noteFileName = getIntent().getStringExtra("noteFileName");
         if (noteFileName == null) {
             noteFileName = "note_" + System.currentTimeMillis();
@@ -1923,55 +1923,75 @@ private void saveAndReturn() {
             notesDir.mkdirs();
         }
 
-        // Save the bitmap of the first page
-        View firstPage = pagesContainer.getChildAt(0);
-        Bitmap firstPageBitmap = createBitmapFromView(firstPage);
         File noteFile = new File(notesDir, noteFileName + ".png");
-        try (FileOutputStream fos = new FileOutputStream(noteFile)) {
-            firstPageBitmap.compress(Bitmap.CompressFormat.PNG, 100, fos);
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-
-        // Save the JSON data for all pages
         File jsonFile = new File(notesDir, noteFileName + ".json");
+
+        boolean hasValidContent = false; // Flag to check if there's at least one valid page
+
         try {
+            // Save the first page bitmap
+            View firstPage = pagesContainer.getChildAt(0);
+            Bitmap firstPageBitmap = createBitmapFromView(firstPage);
+
+            try (FileOutputStream fos = new FileOutputStream(noteFile)) {
+                firstPageBitmap.compress(Bitmap.CompressFormat.PNG, 100, fos);
+            }
+
+            // Save JSON data for all pages
             JSONArray pagesArray = new JSONArray();
 
             for (int i = 0; i < pagesContainer.getChildCount(); i++) {
                 Page page = (Page) pagesContainer.getChildAt(i).getTag();
 
-                // Skip saving if both text and sketch are empty
-                if (page.editText.getText().toString().trim().isEmpty() &&
-                        page.sketchView.getSketchPaths().length() == 0) {
-                    continue;
-                }
+                String textContent = page.editText.getText().toString().trim();
+                JSONArray sketchPaths = page.sketchView.getSketchPaths();
 
-                JSONObject pageJson = new JSONObject();
-                pageJson.put("text", page.editText.getText().toString());
-                pageJson.put("sketch", page.sketchView.getSketchPaths());
-                pagesArray.put(pageJson);
+                // Only save pages with non-empty text or sketches
+                if (!textContent.isEmpty() || sketchPaths.length() > 0) {
+                    JSONObject pageJson = new JSONObject();
+                    pageJson.put("text", textContent);
+                    pageJson.put("sketch", sketchPaths);
+                    pagesArray.put(pageJson);
+
+                    hasValidContent = true; // Found valid content
+                }
             }
 
-            if (pagesArray.length() > 0) {
+            // Only save JSON if there is valid content
+            if (hasValidContent) {
                 JSONObject noteJson = new JSONObject();
                 noteJson.put("pages", pagesArray);
 
                 try (FileOutputStream fos = new FileOutputStream(jsonFile)) {
                     fos.write(noteJson.toString().getBytes());
                 }
+            } else {
+                // If no valid content, delete any existing files created earlier
+                if (noteFile.exists()) {
+                    noteFile.delete();
+                }
+                if (jsonFile.exists()) {
+                    jsonFile.delete();
+                }
             }
         } catch (Exception e) {
             e.printStackTrace();
         }
 
-        // Return the saved note filename
-        Intent resultIntent = new Intent();
-        resultIntent.putExtra("noteFileName", noteFileName);
-        setResult(RESULT_OK, resultIntent);
+        // If no valid content, return without saving
+        if (!hasValidContent) {
+            setResult(RESULT_CANCELED);
+        } else {
+            // Return the saved note filename
+            Intent resultIntent = new Intent();
+            resultIntent.putExtra("noteFileName", noteFileName);
+            setResult(RESULT_OK, resultIntent);
+        }
+
         finish(); // Close the NoteEditorActivity
     }
 }
+
 
 
 
