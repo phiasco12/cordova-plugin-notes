@@ -1827,7 +1827,7 @@ public class NoteEditorActivity extends Activity {
         activePage = page; // Set the first page as active
     }
 
-    /*private void setupBottomToolbar() {
+    private void setupBottomToolbar() {
         bottomToolbar = new LinearLayout(this);
         bottomToolbar.setOrientation(LinearLayout.HORIZONTAL);
         bottomToolbar.setGravity(Gravity.CENTER_VERTICAL);
@@ -1854,54 +1854,11 @@ public class NoteEditorActivity extends Activity {
         saveButton.setBackgroundColor(Color.LTGRAY);
         saveButton.setOnClickListener(v -> saveAndReturn());
         bottomToolbar.addView(saveButton);
-    }*/
+    }
 
 
 
-    private void setupBottomToolbar() {
-    bottomToolbar = new LinearLayout(this);
-    bottomToolbar.setOrientation(LinearLayout.HORIZONTAL);
-    bottomToolbar.setGravity(Gravity.CENTER);
-    bottomToolbar.setBackgroundColor(Color.DKGRAY);
 
-    FrameLayout.LayoutParams toolbarParams = new FrameLayout.LayoutParams(
-            ViewGroup.LayoutParams.MATCH_PARENT,
-            150 // Fixed height for the toolbar
-    );
-    toolbarParams.gravity = Gravity.BOTTOM;
-    bottomToolbar.setLayoutParams(toolbarParams);
-
-    // Save button
-    ImageButton saveButton = new ImageButton(this);
-    saveButton.setImageResource(android.R.drawable.ic_menu_save);
-    saveButton.setBackgroundColor(Color.LTGRAY);
-    saveButton.setOnClickListener(v -> saveNote());
-    LinearLayout.LayoutParams buttonParams = new LinearLayout.LayoutParams(
-            0, // Width is 0 to distribute evenly
-            ViewGroup.LayoutParams.MATCH_PARENT,
-            1.0f // Weight to distribute evenly
-    );
-    saveButton.setLayoutParams(buttonParams);
-
-    // Toggle Sketch Mode button
-    ImageButton toggleSketchButton = new ImageButton(this);
-    toggleSketchButton.setImageResource(android.R.drawable.ic_menu_edit);
-    toggleSketchButton.setBackgroundColor(Color.LTGRAY);
-    toggleSketchButton.setOnClickListener(v -> toggleDrawingMode(toggleSketchButton));
-    toggleSketchButton.setLayoutParams(buttonParams);
-
-    // Toggle Text Mode button
-    ImageButton toggleTextButton = new ImageButton(this);
-    toggleTextButton.setImageResource(android.R.drawable.ic_menu_agenda); // Use a relevant drawable resource for text
-    toggleTextButton.setBackgroundColor(Color.LTGRAY);
-    toggleTextButton.setOnClickListener(v -> toggleTextMode()); // Implement the toggleTextMode method if needed
-    toggleTextButton.setLayoutParams(buttonParams);
-
-    // Add buttons to the toolbar
-    bottomToolbar.addView(saveButton);
-    bottomToolbar.addView(toggleSketchButton);
-    bottomToolbar.addView(toggleTextButton);
-}
 
 
 
