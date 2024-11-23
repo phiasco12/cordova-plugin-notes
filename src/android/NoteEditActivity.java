@@ -10,6 +10,7 @@ import android.os.Bundle;
 import android.text.Editable;
 import android.text.Layout;
 import android.text.TextWatcher;
+import android.util.Log;
 import android.util.Pair;
 import android.view.Gravity;
 import android.view.MotionEvent;
@@ -29,7 +30,11 @@ import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.util.ArrayList;
 
+import android.view.ViewGroup;
+
 public class NoteEditActivity extends Activity {
+
+    private static final String TAG = "NoteEditActivity";
 
     private LinearLayout pagesContainer;
     private CustomScrollView scrollView;
@@ -37,7 +42,7 @@ public class NoteEditActivity extends Activity {
     private int pageHeight, pageWidth;
     private Page activePage;
     private String noteFileName;
-    private boolean isLoading = false;
+    private boolean isLoading = false; // Flag to differentiate loading vs typing
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -46,9 +51,10 @@ public class NoteEditActivity extends Activity {
         // Initialize scrollView and pagesContainer
         scrollView = new CustomScrollView(this);
         scrollView.setLayoutParams(new FrameLayout.LayoutParams(
-                FrameLayout.LayoutParams.MATCH_PARENT,
-                FrameLayout.LayoutParams.MATCH_PARENT
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.MATCH_PARENT
         ));
+
         pagesContainer = new LinearLayout(this);
         pagesContainer.setOrientation(LinearLayout.VERTICAL);
         pagesContainer.setPadding(20, 20, 20, 20);
@@ -57,7 +63,7 @@ public class NoteEditActivity extends Activity {
         scrollView.getViewTreeObserver().addOnGlobalLayoutListener(() -> {
             if (pageHeight == 0 || pageWidth == 0) {
                 pageHeight = scrollView.getHeight() - 150; // Account for toolbar height
-                pageWidth = scrollView.getWidth() - 80; // Account for padding/margin
+                pageWidth = scrollView.getWidth() - 80; // Account for padding
                 loadSavedNote();
             }
         });
@@ -80,8 +86,8 @@ public class NoteEditActivity extends Activity {
         bottomToolbar.setPadding(20, 20, 20, 20);
 
         FrameLayout.LayoutParams toolbarParams = new FrameLayout.LayoutParams(
-                FrameLayout.LayoutParams.MATCH_PARENT,
-                150 // Fixed toolbar height
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                150
         );
         toolbarParams.gravity = Gravity.BOTTOM;
         bottomToolbar.setLayoutParams(toolbarParams);
@@ -102,7 +108,7 @@ public class NoteEditActivity extends Activity {
     }
 
     private void loadSavedNote() {
-        isLoading = true; // Prevent pagination during loading
+        isLoading = true; // Set flag to prevent pagination during loading
         noteFileName = getIntent().getStringExtra("noteFileName");
         if (noteFileName == null) return;
 
@@ -116,6 +122,8 @@ public class NoteEditActivity extends Activity {
             fis.read(buffer);
 
             String jsonData = new String(buffer);
+            Log.d(TAG, "Loaded JSON Data: " + jsonData); // Log the JSON data
+
             JSONObject noteJson = new JSONObject(jsonData);
             JSONArray pagesArray = noteJson.getJSONArray("pages");
 
@@ -134,7 +142,7 @@ public class NoteEditActivity extends Activity {
         } catch (Exception e) {
             e.printStackTrace();
         } finally {
-            isLoading = false; // Allow pagination after loading completes
+            isLoading = false; // Reset flag after loading completes
         }
     }
 
@@ -160,6 +168,8 @@ public class NoteEditActivity extends Activity {
             FileOutputStream fos = new FileOutputStream(jsonFile);
             fos.write(noteJson.toString().getBytes());
             fos.close();
+
+            Log.d(TAG, "Saved JSON Data: " + noteJson.toString()); // Log the saved JSON data
 
             setResult(RESULT_OK);
             finish();
@@ -189,6 +199,7 @@ public class NoteEditActivity extends Activity {
         private final EditText editText;
         private final ResizableSketchView sketchView;
         private boolean isDrawingMode = false;
+        private boolean isTextWatcherActive = true;
 
         public Page(Activity context, int width, int height) {
             pageLayout = new FrameLayout(context);
@@ -196,15 +207,14 @@ public class NoteEditActivity extends Activity {
                     width,
                     height
             );
-            pageParams.setMargins(20, 20, 20, 20); // Margins between pages
+            pageParams.setMargins(20, 20, 20, 20);
             pageLayout.setLayoutParams(pageParams);
 
-            // Background with rounded corners
-            GradientDrawable pageBackground = new GradientDrawable();
-            pageBackground.setColor(Color.WHITE);
-            pageBackground.setCornerRadius(30);
-            pageBackground.setStroke(5, Color.LTGRAY);
-            pageLayout.setBackground(pageBackground);
+            GradientDrawable background = new GradientDrawable();
+            background.setColor(Color.WHITE);
+            background.setCornerRadius(30);
+            background.setStroke(5, Color.LTGRAY);
+            pageLayout.setBackground(background);
 
             editText = new EditText(context);
             editText.setLayoutParams(new FrameLayout.LayoutParams(
@@ -219,9 +229,14 @@ public class NoteEditActivity extends Activity {
             editText.setHorizontallyScrolling(false);
             editText.setSingleLine(false);
 
-            editText.addTextChangedListener(new TextWatcher() {
-                private boolean isTextWatcherActive = true;
+            sketchView = new ResizableSketchView(context, width, height);
+            sketchView.setLayoutParams(new FrameLayout.LayoutParams(
+                    FrameLayout.LayoutParams.MATCH_PARENT,
+                    FrameLayout.LayoutParams.MATCH_PARENT
+            ));
+            sketchView.setBackgroundColor(Color.TRANSPARENT);
 
+            editText.addTextChangedListener(new TextWatcher() {
                 @Override
                 public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
 
@@ -230,39 +245,14 @@ public class NoteEditActivity extends Activity {
 
                 @Override
                 public void afterTextChanged(Editable s) {
-                    if (!isTextWatcherActive || isLoading) return;
+                    if (!isTextWatcherActive || isLoading) return; // Avoid feedback loop
                     editText.post(() -> checkForOverflow());
-                }
-
-                private void checkForOverflow() {
-                    Layout layout = editText.getLayout();
-                    if (layout != null && layout.getHeight() > editText.getHeight()) {
-                        isTextWatcherActive = false;
-
-                        String overflowText = editText.getText().toString();
-                        int lastVisibleLine = layout.getLineForVertical(editText.getHeight());
-                        int overflowStart = layout.getLineStart(lastVisibleLine);
-                        String visibleText = overflowText.substring(0, overflowStart);
-                        String remainingText = overflowText.substring(overflowStart);
-
-                        editText.setText(visibleText);
-
-                        Page newPage = new Page(NoteEditActivity.this, pageWidth, pageHeight);
-                        newPage.editText.setText(remainingText);
-                        pagesContainer.addView(newPage.pageLayout);
-                        activePage = newPage;
-
-                        isTextWatcherActive = true;
-                    }
                 }
             });
 
-            sketchView = new ResizableSketchView(context, width, height);
-            sketchView.setLayoutParams(new FrameLayout.LayoutParams(
-                    FrameLayout.LayoutParams.MATCH_PARENT,
-                    FrameLayout.LayoutParams.MATCH_PARENT
-            ));
-            sketchView.setBackgroundColor(Color.TRANSPARENT);
+            editText.setOnFocusChangeListener((v, hasFocus) -> {
+                if (hasFocus) activePage = this;
+            });
 
             pageLayout.addView(editText);
             pageLayout.addView(sketchView);
@@ -273,17 +263,36 @@ public class NoteEditActivity extends Activity {
             return pageLayout;
         }
 
+        private void checkForOverflow() {
+            Layout layout = editText.getLayout();
+            if (layout != null && layout.getHeight() > editText.getHeight()) {
+                isTextWatcherActive = false;
+
+                String overflowText = editText.getText().toString();
+                int lastVisibleLine = layout.getLineForVertical(editText.getHeight());
+                int overflowStart = layout.getLineStart(lastVisibleLine);
+                String visibleText = overflowText.substring(0, overflowStart);
+                String remainingText = overflowText.substring(overflowStart);
+
+                editText.setText(visibleText);
+
+                Page newPage = new Page(NoteEditActivity.this, pageWidth, pageHeight);
+                newPage.editText.setText(remainingText);
+                pagesContainer.addView(newPage.getPageLayout());
+
+                newPage.editText.requestFocus();
+                activePage = newPage;
+
+                isTextWatcherActive = true;
+            }
+        }
+
         public boolean toggleDrawingMode(ImageButton toggleButton) {
             isDrawingMode = !isDrawingMode;
-            if (isDrawingMode) {
-                toggleButton.setImageResource(android.R.drawable.ic_menu_view);
-                sketchView.setClickable(true);
-                editText.setEnabled(false);
-            } else {
-                toggleButton.setImageResource(android.R.drawable.ic_menu_edit);
-                sketchView.setClickable(false);
-                editText.setEnabled(true);
-            }
+            toggleButton.setImageResource(isDrawingMode ? android.R.drawable.ic_menu_view : android.R.drawable.ic_menu_edit);
+            sketchView.setClickable(isDrawingMode);
+            editText.setEnabled(!isDrawingMode);
+            if (isDrawingMode) hideKeyboard();
             return isDrawingMode;
         }
     }
@@ -291,7 +300,8 @@ public class NoteEditActivity extends Activity {
     private static class ResizableSketchView extends View {
         private final Paint paint;
         private final Path path;
-        private final ArrayList<ArrayList<Pair<Float, Float>>> strokes;
+        private final ArrayList<ArrayList<Pair<Float, Float>>> strokes = new ArrayList<>();
+        private ArrayList<Pair<Float, Float>> currentStroke;
 
         public ResizableSketchView(Activity context, int width, int height) {
             super(context);
@@ -302,7 +312,6 @@ public class NoteEditActivity extends Activity {
             paint.setAntiAlias(true);
             paint.setStrokeCap(Paint.Cap.ROUND);
             path = new Path();
-            strokes = new ArrayList<>();
         }
 
         public JSONArray getSketchPaths() {
@@ -325,8 +334,8 @@ public class NoteEditActivity extends Activity {
         }
 
         public void loadSketchPaths(JSONArray sketchPaths) {
-            strokes.clear();
             path.reset();
+            strokes.clear();
             try {
                 for (int i = 0; i < sketchPaths.length(); i++) {
                     JSONArray strokeArray = sketchPaths.getJSONArray(i);
@@ -348,7 +357,7 @@ public class NoteEditActivity extends Activity {
         private void redrawPath() {
             path.reset();
             for (ArrayList<Pair<Float, Float>> stroke : strokes) {
-                if (!stroke.isEmpty()) {
+                if (stroke.size() > 0) {
                     Pair<Float, Float> firstPoint = stroke.get(0);
                     path.moveTo(firstPoint.first, firstPoint.second);
                     for (int i = 1; i < stroke.size(); i++) {
@@ -374,13 +383,17 @@ public class NoteEditActivity extends Activity {
 
             switch (event.getAction()) {
                 case MotionEvent.ACTION_DOWN:
-                    ArrayList<Pair<Float, Float>> newStroke = new ArrayList<>();
-                    newStroke.add(new Pair<>(x, y));
-                    strokes.add(newStroke);
+                    currentStroke = new ArrayList<>();
+                    currentStroke.add(new Pair<>(x, y));
+                    strokes.add(currentStroke);
                     path.moveTo(x, y);
                     break;
                 case MotionEvent.ACTION_MOVE:
-                    strokes.get(strokes.size() - 1).add(new Pair<>(x, y));
+                    currentStroke.add(new Pair<>(x, y));
+                    path.lineTo(x, y);
+                    break;
+                case MotionEvent.ACTION_UP:
+                    currentStroke.add(new Pair<>(x, y));
                     path.lineTo(x, y);
                     break;
             }
