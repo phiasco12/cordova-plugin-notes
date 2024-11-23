@@ -1493,7 +1493,7 @@ public class NoteEditorActivity extends Activity {
 
 
 
-    private void saveAndReturn() {
+private void saveAndReturn() {
     if (pagesContainer.getChildCount() > 0) {
         // Capture only the first page
         View firstPage = pagesContainer.getChildAt(0);
@@ -1517,6 +1517,9 @@ public class NoteEditorActivity extends Activity {
             e.printStackTrace();
         }
 
+        // Save the JSON file
+        saveAllPagesDataAsJSON(noteFileName);
+
         // Return the saved note filename
         Intent resultIntent = new Intent();
         resultIntent.putExtra("noteFileName", noteFileName);
@@ -1524,6 +1527,80 @@ public class NoteEditorActivity extends Activity {
         finish(); // Close the NoteEditorActivity
     }
 }
+
+
+    //new chatGPT//
+private void saveAllPagesDataAsJSON(String bitmapFileName) {
+    try {
+        // Create the JSON filename by replacing ".png" with ".json"
+        String jsonFileName = bitmapFileName.replace(".png", ".json");
+
+        // Directory to save notes
+        File notesDir = new File(getFilesDir(), "saved_notes");
+        if (!notesDir.exists()) {
+            notesDir.mkdirs();
+        }
+
+        // JSON to hold all page data
+        JSONArray pagesArray = new JSONArray();
+
+        // Loop through all pages in the container
+        for (int i = 0; i < pagesContainer.getChildCount(); i++) {
+            Page currentPage = (Page) pagesContainer.getChildAt(i).getTag(); // Get Page object
+            JSONObject pageObject = new JSONObject();
+
+            // Save text content
+            pageObject.put("text", currentPage.editText.getText().toString());
+
+            // Save sketch paths
+            JSONArray sketchPaths = currentPage.sketchView.getSketchPaths();
+            pageObject.put("sketch", sketchPaths);
+
+            pagesArray.put(pageObject);
+        }
+
+        // Create the final JSON object
+        JSONObject notesObject = new JSONObject();
+        notesObject.put("pages", pagesArray);
+
+        // Save the JSON file
+        File jsonFile = new File(notesDir, jsonFileName);
+        try (FileWriter fileWriter = new FileWriter(jsonFile)) {
+            fileWriter.write(notesObject.toString());
+        }
+    } catch (Exception e) {
+        e.printStackTrace();
+    }
+}
+
+
+//new chatGPT//
+    public JSONArray getSketchPaths() {
+    JSONArray pathsArray = new JSONArray();
+
+    // For each path, extract the points and store them in the array
+    PathMeasure pathMeasure = new PathMeasure(path, false);
+    float[] point = new float[2];
+
+    // Traverse the path and save points
+    for (float distance = 0; distance < pathMeasure.getLength(); distance += 10) {
+        pathMeasure.getPosTan(distance, point, null);
+
+        // Save the point as a JSON object
+        JSONObject pointObject = new JSONObject();
+        try {
+            pointObject.put("x", point[0]);
+            pointObject.put("y", point[1]);
+            pathsArray.put(pointObject);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
+    return pathsArray;
+}
+
+
 
 
     private Bitmap createBitmapFromView(View view) {
