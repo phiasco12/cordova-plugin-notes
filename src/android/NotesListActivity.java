@@ -325,7 +325,7 @@ private void loadSavedNotes() {
 
 
 
-
+//final code//
 package com.example.notesplugin;
 
 import android.app.Activity;
@@ -392,18 +392,12 @@ public class NotesListActivity extends Activity {
     }
 
     // Open the NoteEditActivity for editing a saved note
-    /*private void openNoteEditor(String noteFileName) {
-        Intent intent = new Intent(NotesListActivity.this, NoteEditActivity.class);
-        intent.putExtra("noteFileName", noteFileName); // Pass the note file to edit
-        startActivity(intent);
-    }*/
-
     private void openNoteEditor(String noteFileName) {
-    String noteBaseName = noteFileName.replace(".png", ""); // Remove extension
-    Intent intent = new Intent(NotesListActivity.this, NoteEditActivity.class);
-    intent.putExtra("noteFileName", noteBaseName); // Pass base name
-    startActivity(intent);
-}
+        String noteBaseName = noteFileName.replace(".png", ""); // Remove extension
+        Intent intent = new Intent(NotesListActivity.this, NoteEditActivity.class);
+        intent.putExtra("noteFileName", noteBaseName); // Pass base name
+        startActivity(intent);
+    }
 
     // Handle saved notes
     @Override
@@ -426,8 +420,17 @@ public class NotesListActivity extends Activity {
         File[] files = notesDir.listFiles();
         if (files != null) {
             for (File file : files) {
-                savedNotes.add(file.getName());
-                loadNoteToGrid(file.getName());
+                // Only process files with .png extension
+                if (file.getName().endsWith(".png")) {
+                    String noteBaseName = file.getName().replace(".png", "");
+                    File jsonFile = new File(notesDir, noteBaseName + ".json");
+
+                    // Ensure the corresponding JSON file also exists
+                    if (jsonFile.exists()) {
+                        savedNotes.add(file.getName());
+                        loadNoteToGrid(file.getName());
+                    }
+                }
             }
         }
     }
