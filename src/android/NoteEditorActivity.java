@@ -1910,27 +1910,40 @@ public class NoteEditorActivity extends Activity {
     }*/
 
 
-    private void saveAndReturn() {
+private void saveAndReturn() {
     if (pagesContainer.getChildCount() > 0) {
-        // Save JSON data for all pages
+        // Save the JSON file for all pages
+        String noteFileName = getIntent().getStringExtra("noteFileName");
+        if (noteFileName == null) {
+            noteFileName = "note_" + System.currentTimeMillis();
+        }
+
+        File notesDir = new File(getFilesDir(), "saved_notes");
+        if (!notesDir.exists()) {
+            notesDir.mkdirs();
+        }
+
+        // Save the bitmap of the first page
+        View firstPage = pagesContainer.getChildAt(0);
+        Bitmap firstPageBitmap = createBitmapFromView(firstPage);
+        File noteFile = new File(notesDir, noteFileName + ".png");
+        try (FileOutputStream fos = new FileOutputStream(noteFile)) {
+            firstPageBitmap.compress(Bitmap.CompressFormat.PNG, 100, fos);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+
+        // Save the JSON data for all pages
+        File jsonFile = new File(notesDir, noteFileName + ".json");
         try {
-            File notesDir = new File(getFilesDir(), "saved_notes");
-            if (!notesDir.exists()) notesDir.mkdirs();
-
-            String noteFileName = getIntent().getStringExtra("noteFileName");
-            if (noteFileName == null) {
-                noteFileName = "note_" + System.currentTimeMillis();
-            }
-
-            File jsonFile = new File(notesDir, noteFileName + ".json");
             JSONArray pagesArray = new JSONArray();
 
             for (int i = 0; i < pagesContainer.getChildCount(); i++) {
                 Page page = (Page) pagesContainer.getChildAt(i).getTag();
 
                 // Skip saving if both text and sketch are empty
-                if (page.editText.getText().toString().trim().isEmpty() && 
-                    page.sketchView.getSketchPaths().length() == 0) {
+                if (page.editText.getText().toString().trim().isEmpty() &&
+                        page.sketchView.getSketchPaths().length() == 0) {
                     continue;
                 }
 
@@ -1940,24 +1953,26 @@ public class NoteEditorActivity extends Activity {
                 pagesArray.put(pageJson);
             }
 
-            JSONObject noteJson = new JSONObject();
-            noteJson.put("pages", pagesArray);
+            if (pagesArray.length() > 0) {
+                JSONObject noteJson = new JSONObject();
+                noteJson.put("pages", pagesArray);
 
-            // Save the JSON file
-            FileWriter writer = new FileWriter(jsonFile);
-            writer.write(noteJson.toString());
-            writer.close();
-
-            // Pass back the saved note filename
-            Intent resultIntent = new Intent();
-            resultIntent.putExtra("noteFileName", noteFileName);
-            setResult(RESULT_OK, resultIntent);
-            finish();
+                try (FileOutputStream fos = new FileOutputStream(jsonFile)) {
+                    fos.write(noteJson.toString().getBytes());
+                }
+            }
         } catch (Exception e) {
             e.printStackTrace();
         }
+
+        // Return the saved note filename
+        Intent resultIntent = new Intent();
+        resultIntent.putExtra("noteFileName", noteFileName);
+        setResult(RESULT_OK, resultIntent);
+        finish(); // Close the NoteEditorActivity
     }
 }
+
 
 
     /*private void saveAllPagesDataAsJSON(String bitmapFileName) {
