@@ -1737,7 +1737,6 @@ private void saveAndReturn() {
 
 
 
-
 package com.example.notesplugin;
 
 import android.app.Activity;
@@ -1819,10 +1818,11 @@ public class NoteEditorActivity extends Activity {
         setContentView(mainLayout);
     }
 
-    private void addNewPage() {
+    private Page addNewPage() {
         Page page = new Page(this, pageWidth, pageHeight);
         pagesContainer.addView(page.getPageLayout());
         activePage = page; // Set the first page as active
+        return page;
     }
 
     private void setupBottomToolbar() {
@@ -1856,8 +1856,11 @@ public class NoteEditorActivity extends Activity {
 
     private void toggleDrawingMode(ImageButton toggleButton) {
         if (activePage != null) {
-            boolean isDrawingMode = activePage.toggleDrawingMode(toggleButton);
+            boolean isDrawingMode = activePage.toggleDrawingMode();
             scrollView.setScrollingEnabled(!isDrawingMode);
+            toggleButton.setImageResource(isDrawingMode
+                    ? android.R.drawable.ic_menu_view
+                    : android.R.drawable.ic_menu_edit);
             if (isDrawingMode) {
                 hideKeyboard();
             }
@@ -1919,6 +1922,7 @@ public class NoteEditorActivity extends Activity {
         private final FrameLayout pageLayout;
         private final EditText editText;
         private final ResizableSketchView sketchView;
+        private boolean isDrawingMode = false;
 
         public Page(Activity context, int width, int height) {
             pageLayout = new FrameLayout(context);
@@ -1945,6 +1949,7 @@ public class NoteEditorActivity extends Activity {
 
             pageLayout.addView(editText);
             pageLayout.addView(sketchView);
+            pageLayout.setTag(this);
 
             // Enable pagination
             editText.addTextChangedListener(new TextWatcher() {
@@ -1972,6 +1977,12 @@ public class NoteEditorActivity extends Activity {
 
         public FrameLayout getPageLayout() {
             return pageLayout;
+        }
+
+        public boolean toggleDrawingMode() {
+            isDrawingMode = !isDrawingMode;
+            sketchView.setClickable(isDrawingMode);
+            return isDrawingMode;
         }
 
         private GradientDrawable createPageBackground() {
