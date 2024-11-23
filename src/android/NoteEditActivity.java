@@ -32,6 +32,11 @@ import java.util.ArrayList;
 
 import android.view.ViewGroup;
 
+
+import android.text.SpannableStringBuilder;
+import android.text.style.RelativeSizeSpan;
+
+
 public class NoteEditActivity extends Activity {
 
     private static final String TAG = "NoteEditActivity";
@@ -78,7 +83,7 @@ public class NoteEditActivity extends Activity {
         setContentView(mainLayout);
     }
 
-    private void setupBottomToolbar() {
+    /*private void setupBottomToolbar() {
         bottomToolbar = new LinearLayout(this);
         bottomToolbar.setOrientation(LinearLayout.HORIZONTAL);
         bottomToolbar.setGravity(Gravity.CENTER_VERTICAL);
@@ -105,7 +110,94 @@ public class NoteEditActivity extends Activity {
         toggleButton.setBackgroundColor(Color.LTGRAY);
         toggleButton.setOnClickListener(v -> toggleDrawingMode(toggleButton));
         bottomToolbar.addView(toggleButton);
+    }*/
+
+
+
+
+
+import android.text.SpannableStringBuilder;
+import android.text.style.RelativeSizeSpan;
+
+// Inside the class
+private void setupBottomToolbar() {
+    bottomToolbar = new LinearLayout(this);
+    bottomToolbar.setOrientation(LinearLayout.HORIZONTAL);
+    bottomToolbar.setGravity(Gravity.CENTER_VERTICAL);
+    bottomToolbar.setBackgroundColor(Color.DKGRAY);
+    bottomToolbar.setPadding(20, 20, 20, 20);
+
+    FrameLayout.LayoutParams toolbarParams = new FrameLayout.LayoutParams(
+            ViewGroup.LayoutParams.MATCH_PARENT,
+            150 // Fixed height for the toolbar
+    );
+    toolbarParams.gravity = Gravity.BOTTOM;
+    bottomToolbar.setLayoutParams(toolbarParams);
+
+    // Save button
+    ImageButton saveButton = new ImageButton(this);
+    saveButton.setImageResource(android.R.drawable.ic_menu_save);
+    saveButton.setBackgroundColor(Color.LTGRAY);
+    saveButton.setOnClickListener(v -> saveNote());
+    bottomToolbar.addView(saveButton);
+
+    // Toggle button for switching between text and sketch modes
+    ImageButton toggleButton = new ImageButton(this);
+    toggleButton.setImageResource(android.R.drawable.ic_menu_edit);
+    toggleButton.setBackgroundColor(Color.LTGRAY);
+    toggleButton.setOnClickListener(v -> toggleDrawingMode(toggleButton));
+    bottomToolbar.addView(toggleButton);
+
+    // Font size adjustment button
+    ImageButton fontSizeButton = new ImageButton(this);
+    fontSizeButton.setImageResource(android.R.drawable.ic_menu_zoom); // Placeholder icon for font size
+    fontSizeButton.setBackgroundColor(Color.LTGRAY);
+    fontSizeButton.setOnClickListener(v -> adjustFontSize());
+    bottomToolbar.addView(fontSizeButton);
+}
+
+// Method to adjust font size
+private void adjustFontSize() {
+    if (activePage != null) {
+        EditText editText = activePage.editText;
+        int start = editText.getSelectionStart();
+        int end = editText.getSelectionEnd();
+
+        if (start < 0 || end <= start) {
+            // No selection, or invalid range, do nothing
+            return;
+        }
+
+        Editable editable = editText.getText();
+        SpannableStringBuilder spannable = new SpannableStringBuilder(editable);
+
+        // Get existing spans within the range
+        RelativeSizeSpan[] spans = spannable.getSpans(start, end, RelativeSizeSpan.class);
+
+        float currentSize = 1.0f; // Default size multiplier
+        if (spans.length > 0) {
+            currentSize = spans[0].getSizeChange(); // Get the first span's size
+        }
+
+        // Cycle through sizes (1.0f -> 1.5f -> 2.0f -> back to 1.0f)
+        float nextSize = currentSize == 1.0f ? 1.5f : (currentSize == 1.5f ? 2.0f : 1.0f);
+
+        // Remove existing spans
+        for (RelativeSizeSpan span : spans) {
+            spannable.removeSpan(span);
+        }
+
+        // Apply the new size span
+        spannable.setSpan(new RelativeSizeSpan(nextSize), start, end, 0);
+        editText.setText(spannable);
+        editText.setSelection(start, end); // Retain selection after applying span
     }
+}
+
+
+
+
+    
 
     private void loadSavedNote() {
         isLoading = true; // Set flag to prevent pagination during loading
