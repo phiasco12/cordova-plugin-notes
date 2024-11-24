@@ -266,9 +266,117 @@ private void adjustFontSize() {
 
 
 
-    
+
+
+
+
 
     private void loadSavedNote() {
+    noteFileName = getIntent().getStringExtra("noteFileName");
+    if (noteFileName == null) return;
+
+    File notesDir = new File(getFilesDir(), "saved_notes");
+    File jsonFile = new File(notesDir, noteFileName + ".json");
+
+    if (!jsonFile.exists()) return;
+
+    try (FileInputStream fis = new FileInputStream(jsonFile)) {
+        byte[] buffer = new byte[(int) jsonFile.length()];
+        fis.read(buffer);
+
+        String jsonData = new String(buffer);
+        JSONObject noteJson = new JSONObject(jsonData);
+        JSONArray pagesArray = noteJson.getJSONArray("pages");
+
+        for (int i = 0; i < pagesArray.length(); i++) {
+            JSONObject pageJson = pagesArray.getJSONObject(i);
+            String text = pageJson.getString("text");
+            JSONArray fontSizesArray = pageJson.getJSONArray("fontSizes");
+
+            Page page = new Page(this, pageWidth, pageHeight);
+            page.editText.setText(text);
+
+            // Restore font sizes
+            SpannableStringBuilder spannable = new SpannableStringBuilder(text);
+            for (int j = 0; j < fontSizesArray.length(); j++) {
+                JSONObject spanObject = fontSizesArray.getJSONObject(j);
+                int start = spanObject.getInt("start");
+                int end = spanObject.getInt("end");
+                float size = (float) spanObject.getDouble("size");
+                spannable.setSpan(new RelativeSizeSpan(size), start, end, 0);
+            }
+            page.editText.setText(spannable);
+
+            // Restore sketches
+            JSONArray sketchPaths = pageJson.getJSONArray("sketch");
+            page.sketchView.loadSketchPaths(sketchPaths);
+
+            pagesContainer.addView(page.getPageLayout());
+
+            if (i == 0) activePage = page;
+        }
+    } catch (Exception e) {
+        e.printStackTrace();
+    }
+}
+
+
+
+    private void saveNote() {
+    try {
+        File notesDir = new File(getFilesDir(), "saved_notes");
+        if (!notesDir.exists()) notesDir.mkdirs();
+
+        File jsonFile = new File(notesDir, noteFileName + ".json");
+        JSONObject noteJson = new JSONObject();
+        JSONArray pagesArray = new JSONArray();
+
+        for (int i = 0; i < pagesContainer.getChildCount(); i++) {
+            Page page = (Page) pagesContainer.getChildAt(i).getTag();
+            JSONObject pageJson = new JSONObject();
+
+            // Save text content
+            pageJson.put("text", page.editText.getText().toString());
+
+            // Save font sizes for spans
+            JSONArray fontSizesArray = new JSONArray();
+            SpannableStringBuilder spannable = new SpannableStringBuilder(page.editText.getText());
+            RelativeSizeSpan[] spans = spannable.getSpans(0, spannable.length(), RelativeSizeSpan.class);
+            for (RelativeSizeSpan span : spans) {
+                int start = spannable.getSpanStart(span);
+                int end = spannable.getSpanEnd(span);
+                JSONObject spanObject = new JSONObject();
+                spanObject.put("start", start);
+                spanObject.put("end", end);
+                spanObject.put("size", span.getSizeChange());
+                fontSizesArray.put(spanObject);
+            }
+            pageJson.put("fontSizes", fontSizesArray);
+
+            // Save sketch paths
+            pageJson.put("sketch", page.sketchView.getSketchPaths());
+
+            pagesArray.put(pageJson);
+        }
+
+        noteJson.put("pages", pagesArray);
+
+        FileOutputStream fos = new FileOutputStream(jsonFile);
+        fos.write(noteJson.toString().getBytes());
+        fos.close();
+
+        setResult(RESULT_OK);
+        finish();
+    } catch (Exception e) {
+        e.printStackTrace();
+    }
+}
+
+
+
+    
+
+   /* private void loadSavedNote() {
         isLoading = true; // Set flag to prevent pagination during loading
         noteFileName = getIntent().getStringExtra("noteFileName");
         if (noteFileName == null) return;
@@ -337,7 +445,7 @@ private void adjustFontSize() {
         } catch (Exception e) {
             e.printStackTrace();
         }
-    }
+    }*/
 
     private void toggleDrawingMode(ImageButton toggleButton) {
         if (activePage != null) {
