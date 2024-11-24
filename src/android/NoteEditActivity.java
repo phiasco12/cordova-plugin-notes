@@ -207,7 +207,7 @@ private void setupBottomToolbar() {
 
     // Font size adjustment button
     ImageButton fontSizeButton = new ImageButton(this);
-    fontSizeButton.setImageResource(android.R.drawable.format_size); // Placeholder icon for font size
+    fontSizeButton.setImageResource(android.R.drawable.edit_text); // Placeholder icon for font size
     fontSizeButton.setBackgroundColor(Color.LTGRAY);
     fontSizeButton.setOnClickListener(v -> adjustFontSize());
     fontSizeButton.setLayoutParams(buttonParams);
