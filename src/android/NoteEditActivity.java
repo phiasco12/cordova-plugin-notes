@@ -272,6 +272,7 @@ private void adjustFontSize() {
 
 
     private void loadSavedNote() {
+    isLoading = true; // Set flag to prevent pagination during loading
     noteFileName = getIntent().getStringExtra("noteFileName");
     if (noteFileName == null) return;
 
@@ -285,41 +286,45 @@ private void adjustFontSize() {
         fis.read(buffer);
 
         String jsonData = new String(buffer);
+        Log.d(TAG, "Loaded JSON Data: " + jsonData); // Log the JSON data
+
         JSONObject noteJson = new JSONObject(jsonData);
         JSONArray pagesArray = noteJson.getJSONArray("pages");
 
         for (int i = 0; i < pagesArray.length(); i++) {
             JSONObject pageJson = pagesArray.getJSONObject(i);
             String text = pageJson.getString("text");
-            JSONArray fontSizesArray = pageJson.getJSONArray("fontSizes");
+            JSONArray sketchPaths = pageJson.getJSONArray("sketch");
+
+            // Retrieve font size spans if present
+            JSONArray fontSizesArray = pageJson.optJSONArray("fontSizes");
 
             Page page = new Page(this, pageWidth, pageHeight);
             page.editText.setText(text);
 
-            // Restore font sizes
-            SpannableStringBuilder spannable = new SpannableStringBuilder(text);
-            for (int j = 0; j < fontSizesArray.length(); j++) {
-                JSONObject spanObject = fontSizesArray.getJSONObject(j);
-                int start = spanObject.getInt("start");
-                int end = spanObject.getInt("end");
-                float size = (float) spanObject.getDouble("size");
-                spannable.setSpan(new RelativeSizeSpan(size), start, end, 0);
+            if (fontSizesArray != null) {
+                SpannableStringBuilder spannable = new SpannableStringBuilder(text);
+                for (int j = 0; j < fontSizesArray.length(); j++) {
+                    JSONObject spanObject = fontSizesArray.getJSONObject(j);
+                    int start = spanObject.getInt("start");
+                    int end = spanObject.getInt("end");
+                    float size = (float) spanObject.getDouble("size");
+                    spannable.setSpan(new RelativeSizeSpan(size), start, end, 0);
+                }
+                page.editText.setText(spannable);
             }
-            page.editText.setText(spannable);
 
-            // Restore sketches
-            JSONArray sketchPaths = pageJson.getJSONArray("sketch");
             page.sketchView.loadSketchPaths(sketchPaths);
-
             pagesContainer.addView(page.getPageLayout());
 
-            if (i == 0) activePage = page;
+            if (i == 0) activePage = page; // Set the first page as active
         }
     } catch (Exception e) {
         e.printStackTrace();
+    } finally {
+        isLoading = false; // Reset flag after loading completes
     }
 }
-
 
 
     private void saveNote() {
@@ -334,11 +339,9 @@ private void adjustFontSize() {
         for (int i = 0; i < pagesContainer.getChildCount(); i++) {
             Page page = (Page) pagesContainer.getChildAt(i).getTag();
             JSONObject pageJson = new JSONObject();
-
-            // Save text content
             pageJson.put("text", page.editText.getText().toString());
 
-            // Save font sizes for spans
+            // Save font sizes
             JSONArray fontSizesArray = new JSONArray();
             SpannableStringBuilder spannable = new SpannableStringBuilder(page.editText.getText());
             RelativeSizeSpan[] spans = spannable.getSpans(0, spannable.length(), RelativeSizeSpan.class);
@@ -353,9 +356,7 @@ private void adjustFontSize() {
             }
             pageJson.put("fontSizes", fontSizesArray);
 
-            // Save sketch paths
             pageJson.put("sketch", page.sketchView.getSketchPaths());
-
             pagesArray.put(pageJson);
         }
 
@@ -365,12 +366,15 @@ private void adjustFontSize() {
         fos.write(noteJson.toString().getBytes());
         fos.close();
 
+        Log.d(TAG, "Saved JSON Data: " + noteJson.toString()); // Log the saved JSON data
+
         setResult(RESULT_OK);
         finish();
     } catch (Exception e) {
         e.printStackTrace();
     }
 }
+
 
 
 
