@@ -345,6 +345,9 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.util.ArrayList;
 
+import android.graphics.Color;
+
+
 public class NotesListActivity extends Activity {
 
     private static final String NOTES_DIR = "saved_notes";
