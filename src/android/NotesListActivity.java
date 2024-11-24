@@ -360,11 +360,18 @@ public class NotesListActivity extends Activity {
         mainLayout.setOrientation(LinearLayout.VERTICAL);
 
         // Create note button
-        Button createNoteButton = new Button(this);
-        createNoteButton.setText("Create Note");
-        createNoteButton.setGravity(Gravity.CENTER);
-        createNoteButton.setOnClickListener(v -> openNoteCreator());
-        mainLayout.addView(createNoteButton);
+Button createNoteButton = new Button(this);
+createNoteButton.setText("Create Note");
+createNoteButton.setGravity(Gravity.CENTER);
+
+// Set background color to #da116d
+createNoteButton.setBackgroundColor(Color.parseColor("#da116d"));
+
+// Optional: Set text color for better contrast
+createNoteButton.setTextColor(Color.WHITE);
+
+createNoteButton.setOnClickListener(v -> openNoteCreator());
+mainLayout.addView(createNoteButton);
 
         // Notes grid layout
         notesGrid = new GridLayout(this);
