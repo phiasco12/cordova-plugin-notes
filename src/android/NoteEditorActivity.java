@@ -2032,7 +2032,7 @@ private int findIndex(float[] array, float value) {
     }*/
 
 
-private void saveAndReturn() {
+/*private void saveAndReturn() {
     if (pagesContainer.getChildCount() > 0) {
         // Prepare directory and file names
         String noteFileName = getIntent().getStringExtra("noteFileName");
@@ -2112,7 +2112,108 @@ private void saveAndReturn() {
 
         finish(); // Close the NoteEditorActivity
     }
+}*/
+
+
+
+
+    private void saveAndReturn() {
+    if (pagesContainer.getChildCount() > 0) {
+        // Prepare directory and file names
+        String noteFileName = getIntent().getStringExtra("noteFileName");
+        if (noteFileName == null) {
+            noteFileName = "note_" + System.currentTimeMillis();
+        }
+
+        File notesDir = new File(getFilesDir(), "saved_notes");
+        if (!notesDir.exists()) {
+            notesDir.mkdirs();
+        }
+
+        File noteFile = new File(notesDir, noteFileName + ".png");
+        File jsonFile = new File(notesDir, noteFileName + ".json");
+
+        boolean hasValidContent = false; // Flag to check if there's at least one valid page
+
+        try {
+            // Save the first page bitmap
+            View firstPage = pagesContainer.getChildAt(0);
+            Bitmap firstPageBitmap = createBitmapFromView(firstPage);
+
+            try (FileOutputStream fos = new FileOutputStream(noteFile)) {
+                firstPageBitmap.compress(Bitmap.CompressFormat.PNG, 100, fos);
+            }
+
+            // Save JSON data for all pages
+            JSONArray pagesArray = new JSONArray();
+
+            for (int i = 0; i < pagesContainer.getChildCount(); i++) {
+                Page page = (Page) pagesContainer.getChildAt(i).getTag();
+
+                String textContent = page.editText.getText().toString().trim();
+                JSONArray sketchPaths = page.sketchView.getSketchPaths();
+
+                // Extract font size spans
+                JSONArray fontSizesArray = new JSONArray();
+                SpannableStringBuilder spannable = new SpannableStringBuilder(page.editText.getText());
+                RelativeSizeSpan[] spans = spannable.getSpans(0, spannable.length(), RelativeSizeSpan.class);
+                for (RelativeSizeSpan span : spans) {
+                    int start = spannable.getSpanStart(span);
+                    int end = spannable.getSpanEnd(span);
+                    JSONObject spanObject = new JSONObject();
+                    spanObject.put("start", start);
+                    spanObject.put("end", end);
+                    spanObject.put("size", span.getSizeChange());
+                    fontSizesArray.put(spanObject);
+                }
+
+                // Only save pages with non-empty text or sketches
+                if (!textContent.isEmpty() || sketchPaths.length() > 0) {
+                    JSONObject pageJson = new JSONObject();
+                    pageJson.put("text", textContent);
+                    pageJson.put("sketch", sketchPaths);
+                    pageJson.put("fontSizes", fontSizesArray); // Add font sizes to JSON
+                    pagesArray.put(pageJson);
+
+                    hasValidContent = true; // Found valid content
+                }
+            }
+
+            // Only save JSON if there is valid content
+            if (hasValidContent) {
+                JSONObject noteJson = new JSONObject();
+                noteJson.put("pages", pagesArray);
+
+                try (FileOutputStream fos = new FileOutputStream(jsonFile)) {
+                    fos.write(noteJson.toString().getBytes());
+                }
+            } else {
+                // If no valid content, delete any existing files created earlier
+                if (noteFile.exists()) {
+                    noteFile.delete();
+                }
+                if (jsonFile.exists()) {
+                    jsonFile.delete();
+                }
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+
+        // If no valid content, return without saving
+        if (!hasValidContent) {
+            setResult(RESULT_CANCELED);
+        } else {
+            // Return the saved note filename
+            Intent resultIntent = new Intent();
+            resultIntent.putExtra("noteFileName", noteFileName);
+            setResult(RESULT_OK, resultIntent);
+        }
+
+        finish(); // Close the NoteEditorActivity
+    }
 }
+
 
 
 
