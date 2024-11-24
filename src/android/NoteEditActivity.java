@@ -118,7 +118,7 @@ public class NoteEditActivity extends Activity {
 
 
 // Inside the class
-private void setupBottomToolbar() {
+/*private void setupBottomToolbar() {
     bottomToolbar = new LinearLayout(this);
     bottomToolbar.setOrientation(LinearLayout.HORIZONTAL);
     bottomToolbar.setGravity(Gravity.CENTER_VERTICAL);
@@ -152,7 +152,78 @@ private void setupBottomToolbar() {
     fontSizeButton.setBackgroundColor(Color.LTGRAY);
     fontSizeButton.setOnClickListener(v -> adjustFontSize());
     bottomToolbar.addView(fontSizeButton);
+}*/
+
+
+
+
+
+
+
+
+
+
+
+
+private void setupBottomToolbar() {
+    bottomToolbar = new LinearLayout(this);
+    bottomToolbar.setOrientation(LinearLayout.HORIZONTAL);
+    bottomToolbar.setGravity(Gravity.CENTER);
+    bottomToolbar.setBackgroundColor(Color.DKGRAY);
+
+    FrameLayout.LayoutParams toolbarParams = new FrameLayout.LayoutParams(
+            ViewGroup.LayoutParams.MATCH_PARENT,
+            150 // Fixed height for the toolbar
+    );
+    toolbarParams.gravity = Gravity.BOTTOM;
+    bottomToolbar.setLayoutParams(toolbarParams);
+
+    // Common layout parameters for evenly spaced buttons
+    LinearLayout.LayoutParams buttonParams = new LinearLayout.LayoutParams(
+            0, // Width is 0 to distribute evenly
+            ViewGroup.LayoutParams.MATCH_PARENT,
+            1.0f // Weight to distribute evenly
+    );
+
+    // Save button
+    ImageButton saveButton = new ImageButton(this);
+    saveButton.setImageResource(android.R.drawable.ic_menu_save);
+    saveButton.setBackgroundColor(Color.LTGRAY);
+    saveButton.setOnClickListener(v -> saveNote());
+    saveButton.setLayoutParams(buttonParams);
+
+    // Toggle Sketch Mode button
+    ImageButton toggleButton = new ImageButton(this);
+    toggleButton.setImageResource(android.R.drawable.ic_menu_edit);
+    toggleButton.setBackgroundColor(Color.LTGRAY);
+    toggleButton.setOnClickListener(v -> toggleDrawingMode(toggleButton));
+    toggleButton.setLayoutParams(buttonParams);
+
+    // Font size adjustment button
+    ImageButton fontSizeButton = new ImageButton(this);
+    fontSizeButton.setImageResource(android.R.drawable.ic_menu_zoom); // Placeholder icon for font size
+    fontSizeButton.setBackgroundColor(Color.LTGRAY);
+    fontSizeButton.setOnClickListener(v -> adjustFontSize());
+    fontSizeButton.setLayoutParams(buttonParams);
+
+    // Add buttons to the toolbar
+    bottomToolbar.addView(saveButton);
+    bottomToolbar.addView(toggleButton);
+    bottomToolbar.addView(fontSizeButton);
 }
+
+
+
+
+
+
+
+
+
+
+
+
+    
 
 // Method to adjust font size
 private void adjustFontSize() {
