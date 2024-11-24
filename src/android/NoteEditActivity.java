@@ -327,7 +327,7 @@ private void adjustFontSize() {
 }
 
 
-    private void saveNote() {
+    /*private void saveNote() {
     try {
         File notesDir = new File(getFilesDir(), "saved_notes");
         if (!notesDir.exists()) notesDir.mkdirs();
@@ -373,10 +373,69 @@ private void adjustFontSize() {
     } catch (Exception e) {
         e.printStackTrace();
     }
+}*/
+
+
+
+private void saveNote() {
+    try {
+        File notesDir = new File(getFilesDir(), "saved_notes");
+        if (!notesDir.exists()) notesDir.mkdirs();
+
+        // Prepare JSON file for the note
+        File jsonFile = new File(notesDir, noteFileName + ".json");
+        JSONObject noteJson = new JSONObject();
+        JSONArray pagesArray = new JSONArray();
+
+        for (int i = 0; i < pagesContainer.getChildCount(); i++) {
+            Page page = (Page) pagesContainer.getChildAt(i).getTag();
+            JSONObject pageJson = new JSONObject();
+            pageJson.put("text", page.editText.getText().toString());
+
+            // Save font sizes
+            JSONArray fontSizesArray = new JSONArray();
+            SpannableStringBuilder spannable = new SpannableStringBuilder(page.editText.getText());
+            RelativeSizeSpan[] spans = spannable.getSpans(0, spannable.length(), RelativeSizeSpan.class);
+            for (RelativeSizeSpan span : spans) {
+                int start = spannable.getSpanStart(span);
+                int end = spannable.getSpanEnd(span);
+                JSONObject spanObject = new JSONObject();
+                spanObject.put("start", start);
+                spanObject.put("end", end);
+                spanObject.put("size", span.getSizeChange());
+                fontSizesArray.put(spanObject);
+            }
+            pageJson.put("fontSizes", fontSizesArray);
+
+            // Save sketches
+            pageJson.put("sketch", page.sketchView.getSketchPaths());
+            pagesArray.put(pageJson);
+        }
+
+        noteJson.put("pages", pagesArray);
+
+        // Write JSON data to file
+        FileOutputStream fos = new FileOutputStream(jsonFile);
+        fos.write(noteJson.toString().getBytes());
+        fos.close();
+
+        // Save updated bitmap for the first page
+        File bitmapFile = new File(notesDir, noteFileName + ".png");
+        View firstPage = pagesContainer.getChildAt(0);
+        Bitmap firstPageBitmap = createBitmapFromView(firstPage);
+
+        try (FileOutputStream bitmapFos = new FileOutputStream(bitmapFile)) {
+            firstPageBitmap.compress(Bitmap.CompressFormat.PNG, 100, bitmapFos);
+        }
+
+        Log.d(TAG, "Saved JSON Data: " + noteJson.toString()); // Log the saved JSON data
+
+        setResult(RESULT_OK);
+        finish();
+    } catch (Exception e) {
+        e.printStackTrace();
+    }
 }
-
-
-
 
     
 
