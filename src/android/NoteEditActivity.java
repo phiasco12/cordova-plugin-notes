@@ -37,6 +37,12 @@ import android.text.SpannableStringBuilder;
 import android.text.style.RelativeSizeSpan;
 
 
+import android.graphics.Bitmap;
+import android.graphics.Canvas;
+import android.view.View;
+
+
+
 public class NoteEditActivity extends Activity {
 
     private static final String TAG = "NoteEditActivity";
