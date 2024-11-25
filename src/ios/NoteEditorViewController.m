@@ -234,17 +234,22 @@
 
 
 
+
+
+
+
+
+
 #import "NoteEditorViewController.h"
 
 @interface SketchView : UIView
 
-@property (nonatomic, strong) NSMutableArray<UIBezierPath *> *paths; // All paths for drawing
+@property (nonatomic, strong) NSMutableArray<UIBezierPath *> *paths; // Paths for drawing
 @property (nonatomic, strong) UIBezierPath *currentPath; // Current drawing path
 @property (nonatomic, strong) UIColor *lineColor;
 @property (nonatomic, assign) CGFloat lineWidth;
 
 - (void)clearDrawing;
-- (NSArray *)getDrawingPaths;
 
 @end
 
@@ -288,16 +293,6 @@
 - (void)clearDrawing {
     [self.paths removeAllObjects];
     [self setNeedsDisplay];
-}
-
-- (NSArray *)getDrawingPaths {
-    NSMutableArray *pathArray = [NSMutableArray array];
-    for (UIBezierPath *path in self.paths) {
-        NSMutableArray *points = [NSMutableArray array];
-        CGPathApply(path.CGPath, (__bridge void *)points, CGPathApplier);
-        [pathArray addObject:points];
-    }
-    return pathArray;
 }
 
 @end
@@ -428,6 +423,11 @@
     [self scrollToPage:page];
 }
 
+- (void)scrollToPage:(UIView *)page {
+    CGFloat offset = page.frame.origin.y - 10.0; // Small padding before the page
+    [self.scrollView setContentOffset:CGPointMake(0, offset) animated:YES];
+}
+
 #pragma mark - Toggle Drawing Mode
 
 - (void)toggleDrawingMode {
@@ -444,7 +444,8 @@
 
 #pragma mark - Save Functionality
 
-// Same save function as before, now also save the sketch data
+- (void)saveAndReturn {
+    // Implement save functionality, as per the existing code.
+}
 
 @end
-
