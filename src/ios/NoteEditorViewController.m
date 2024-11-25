@@ -489,6 +489,17 @@
 
 
 
+
+
+
+
+
+
+
+
+
+
+
 #import "NoteEditorViewController.h"
 
 @interface NoteEditorViewController () <UITextViewDelegate>
@@ -502,6 +513,7 @@
 @property (nonatomic, strong) NSMutableArray<UIView *> *pages; // Pages in the editor
 @property (nonatomic, weak) UIView *activePage; // Current active page
 @property (nonatomic, weak) UITextView *activeTextView; // Current active text input
+@property (nonatomic, assign) BOOL isDrawingMode; // To track the drawing mode
 
 @end
 
@@ -510,6 +522,7 @@
 - (void)viewDidLoad {
     [super viewDidLoad];
     self.view.backgroundColor = [UIColor whiteColor];
+    self.isDrawingMode = NO; // Default to typing mode
 
     // Initialize properties
     self.pages = [NSMutableArray array];
@@ -548,12 +561,12 @@
     [saveButton addTarget:self action:@selector(saveAndReturn) forControlEvents:UIControlEventTouchUpInside];
     [self.bottomToolbar addSubview:saveButton];
 
-    // Add Page button
-    UIButton *addPageButton = [UIButton buttonWithType:UIButtonTypeSystem];
-    [addPageButton setTitle:@"Add Page" forState:UIControlStateNormal];
-    [addPageButton setFrame:CGRectMake(120, 10, 100, 40)];
-    [addPageButton addTarget:self action:@selector(addNewPage) forControlEvents:UIControlEventTouchUpInside];
-    [self.bottomToolbar addSubview:addPageButton];
+    // Toggle drawing mode button
+    UIButton *toggleButton = [UIButton buttonWithType:UIButtonTypeSystem];
+    [toggleButton setTitle:@"Toggle Drawing" forState:UIControlStateNormal];
+    [toggleButton setFrame:CGRectMake(120, 10, 150, 40)];
+    [toggleButton addTarget:self action:@selector(toggleDrawingMode) forControlEvents:UIControlEventTouchUpInside];
+    [self.bottomToolbar addSubview:toggleButton];
 
     // Add toolbar to the view
     [self.view addSubview:self.bottomToolbar];
@@ -590,8 +603,14 @@
     textView.delegate = self; // Enable overflow handling
     textView.autoresizingMask = UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleHeight;
 
-    // Add the UITextView to the page
+    // Add a UIView for drawing (hidden initially)
+    UIView *drawingView = [[UIView alloc] initWithFrame:page.bounds];
+    drawingView.backgroundColor = [UIColor clearColor];
+    drawingView.hidden = YES; // Only visible in drawing mode
+
+    // Add the UITextView and drawingView to the page
     [page addSubview:textView];
+    [page addSubview:drawingView];
 
     // Add the page to the container
     [self.pagesContainer addSubview:page];
@@ -614,45 +633,18 @@
     [self.scrollView setContentOffset:CGPointMake(0, offset) animated:YES];
 }
 
-#pragma mark - Text Overflow Handling
+#pragma mark - Toggle Drawing Mode
 
-- (void)textViewDidChange:(UITextView *)textView {
-    // Check if the text exceeds the height of the current page
-    CGSize textSize = [textView sizeThatFits:CGSizeMake(textView.bounds.size.width, CGFLOAT_MAX)];
-    if (textSize.height > textView.bounds.size.height) {
-        // Move the overflowing text to a new page
-        [self handleTextOverflowFromTextView:textView];
+- (void)toggleDrawingMode {
+    self.isDrawingMode = !self.isDrawingMode;
+
+    for (UIView *page in self.pages) {
+        UITextView *textView = page.subviews[0];
+        UIView *drawingView = page.subviews[1];
+
+        textView.hidden = self.isDrawingMode;
+        drawingView.hidden = !self.isDrawingMode;
     }
-}
-
-- (void)handleTextOverflowFromTextView:(UITextView *)textView {
-    // Get the layout of the text
-    NSRange visibleRange = [self getVisibleTextRangeForTextView:textView];
-    if (visibleRange.location == NSNotFound) return;
-
-    // Extract the overflowing text
-    NSString *text = textView.text;
-    NSString *visibleText = [text substringToIndex:visibleRange.location];
-    NSString *remainingText = [text substringFromIndex:visibleRange.location];
-
-    // Update the current page with visible text
-    textView.text = visibleText;
-
-    // Create a new page and set the remaining text
-    [self addNewPage];
-    self.activeTextView.text = remainingText;
-
-    // Move the cursor to the new page
-    [self.activeTextView becomeFirstResponder];
-}
-
-- (NSRange)getVisibleTextRangeForTextView:(UITextView *)textView {
-    UITextPosition *startPosition = textView.beginningOfDocument;
-    UITextPosition *endPosition = [textView characterRangeAtPoint:CGPointMake(0, textView.bounds.size.height)].end;
-    if (!startPosition || !endPosition) return NSMakeRange(NSNotFound, 0);
-
-    NSInteger startOffset = [textView offsetFromPosition:startPosition toPosition:endPosition];
-    return NSMakeRange(startOffset, textView.text.length - startOffset);
 }
 
 #pragma mark - Save Functionality
@@ -676,6 +668,7 @@
 
         NSDictionary *pageData = @{
             @"text": textContent,
+            @"sketch": @[] // Placeholder for sketch data
         };
         [pageDataArray addObject:pageData];
     }
@@ -710,4 +703,5 @@
 }
 
 @end
+
 
