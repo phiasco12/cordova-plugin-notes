@@ -1,18 +1,16 @@
 #import "NoteEditorViewController.h"
 
-@interface NoteEditorViewController ()
+@interface NoteEditorViewController () <UITextViewDelegate>
 
 // UI Elements
 @property (nonatomic, strong) UIScrollView *scrollView;
 @property (nonatomic, strong) UIView *pagesContainer;
 @property (nonatomic, strong) UIView *bottomToolbar;
 
-@property (nonatomic, strong) UITextView *activeTextView; // Text input for active page
-@property (nonatomic, strong) UIImageView *activeSketchView; // Sketch input for active page
-@property (nonatomic) BOOL isDrawingMode; // Track text/drawing mode
-
+@property (nonatomic) CGSize pageSize;
 @property (nonatomic, strong) NSMutableArray<UIView *> *pages; // Pages in the editor
 @property (nonatomic, weak) UIView *activePage; // Current active page
+@property (nonatomic, weak) UITextView *activeTextView; // Current active text input
 
 @end
 
@@ -24,16 +22,16 @@
 
     // Initialize properties
     self.pages = [NSMutableArray array];
-    self.isDrawingMode = NO;
+    self.pageSize = CGSizeZero;
 
     // Setup scroll view
     [self setupScrollView];
 
-    // Add the first page
-    [self addNewPage];
-
     // Setup bottom toolbar
     [self setupBottomToolbar];
+
+    // Add the first page automatically
+    [self addNewPage];
 }
 
 #pragma mark - UI Setup
@@ -52,34 +50,15 @@
     self.bottomToolbar.autoresizingMask = UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleTopMargin;
     self.bottomToolbar.backgroundColor = [UIColor darkGrayColor];
 
-    // Save Button
-    UIButton *saveButton = [self createToolbarButtonWithTitle:@"Save"];
-    saveButton.frame = CGRectMake(10, 10, 80, 40);
+    // Save button
+    UIButton *saveButton = [UIButton buttonWithType:UIButtonTypeSystem];
+    [saveButton setTitle:@"Save" forState:UIControlStateNormal];
+    [saveButton setFrame:CGRectMake(10, 10, 100, 40)];
     [saveButton addTarget:self action:@selector(saveAndReturn) forControlEvents:UIControlEventTouchUpInside];
     [self.bottomToolbar addSubview:saveButton];
 
-    // Toggle Text/Draw Mode Button
-    UIButton *toggleModeButton = [self createToolbarButtonWithTitle:@"Toggle"];
-    toggleModeButton.frame = CGRectMake(100, 10, 80, 40);
-    [toggleModeButton addTarget:self action:@selector(toggleDrawingMode) forControlEvents:UIControlEventTouchUpInside];
-    [self.bottomToolbar addSubview:toggleModeButton];
-
-    // Add Page Button
-    UIButton *addPageButton = [self createToolbarButtonWithTitle:@"Add Page"];
-    addPageButton.frame = CGRectMake(190, 10, 120, 40);
-    [addPageButton addTarget:self action:@selector(addNewPage) forControlEvents:UIControlEventTouchUpInside];
-    [self.bottomToolbar addSubview:addPageButton];
-
+    // Add toolbar to the view
     [self.view addSubview:self.bottomToolbar];
-}
-
-- (UIButton *)createToolbarButtonWithTitle:(NSString *)title {
-    UIButton *button = [UIButton buttonWithType:UIButtonTypeSystem];
-    [button setTitle:title forState:UIControlStateNormal];
-    button.backgroundColor = [UIColor lightGrayColor];
-    button.layer.cornerRadius = 5.0;
-    [button setTitleColor:[UIColor blackColor] forState:UIControlStateNormal];
-    return button;
 }
 
 #pragma mark - Page Management
@@ -88,28 +67,23 @@
     CGFloat pageWidth = self.view.bounds.size.width - 40; // 20px padding on each side
     CGFloat pageHeight = self.view.bounds.size.height - 120; // Leave space for toolbar
 
+    // Create a new page container
     UIView *page = [[UIView alloc] initWithFrame:CGRectMake(20, self.pages.count * (pageHeight + 20), pageWidth, pageHeight)];
     page.backgroundColor = [UIColor whiteColor];
     page.layer.borderColor = [UIColor lightGrayColor].CGColor;
     page.layer.borderWidth = 1.0;
     page.layer.cornerRadius = 10.0;
 
-    // Add text view for typing
-    UITextView *textView = [[UITextView alloc] initWithFrame:page.bounds];
+    // Add a UITextView for typing
+    UITextView *textView = [[UITextView alloc] initWithFrame:CGRectInset(page.bounds, 10, 10)];
     textView.backgroundColor = [UIColor clearColor];
     textView.font = [UIFont systemFontOfSize:16.0];
     textView.textColor = [UIColor blackColor];
+    textView.delegate = self; // Enable overflow handling
+    textView.autoresizingMask = UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleHeight;
+
+    // Add the UITextView to the page
     [page addSubview:textView];
-
-    // Add image view for drawing (overlay)
-    UIImageView *sketchView = [[UIImageView alloc] initWithFrame:page.bounds];
-    sketchView.backgroundColor = [UIColor clearColor];
-    sketchView.userInteractionEnabled = YES; // Enable touch events
-    [page addSubview:sketchView];
-
-    // Add gesture for drawing
-    UIPanGestureRecognizer *panGesture = [[UIPanGestureRecognizer alloc] initWithTarget:self action:@selector(handlePanGesture:)];
-    [sketchView addGestureRecognizer:panGesture];
 
     // Add the page to the container
     [self.pagesContainer addSubview:page];
@@ -117,82 +91,102 @@
 
     self.activePage = page;
     self.activeTextView = textView;
-    self.activeSketchView = sketchView;
 
     // Update scroll content size
     self.pagesContainer.frame = CGRectMake(0, 0, self.scrollView.bounds.size.width, CGRectGetMaxY(page.frame) + 20);
     self.scrollView.contentSize = self.pagesContainer.frame.size;
 }
 
-#pragma mark - Drawing and Typing
+#pragma mark - Text Overflow Handling
 
-- (void)toggleDrawingMode {
-    self.isDrawingMode = !self.isDrawingMode;
-
-    if (self.isDrawingMode) {
-        self.activeTextView.hidden = YES; // Hide text view
-        self.activeSketchView.hidden = NO; // Show sketch view
-    } else {
-        self.activeTextView.hidden = NO; // Show text view
-        self.activeSketchView.hidden = YES; // Hide sketch view
+- (void)textViewDidChange:(UITextView *)textView {
+    // Check if the text exceeds the height of the current page
+    CGSize textSize = [textView sizeThatFits:CGSizeMake(textView.bounds.size.width, CGFLOAT_MAX)];
+    if (textSize.height > textView.bounds.size.height) {
+        // Move the overflowing text to a new page
+        [self handleTextOverflowFromTextView:textView];
     }
 }
 
-- (void)handlePanGesture:(UIPanGestureRecognizer *)gesture {
-    if (!self.isDrawingMode) return;
+- (void)handleTextOverflowFromTextView:(UITextView *)textView {
+    // Get the layout of the text
+    NSRange visibleRange = [self getVisibleTextRangeForTextView:textView];
+    if (visibleRange.location == NSNotFound) return;
 
-    CGPoint touchPoint = [gesture locationInView:self.activeSketchView];
+    // Extract the overflowing text
+    NSString *text = textView.text;
+    NSString *visibleText = [text substringToIndex:visibleRange.location];
+    NSString *remainingText = [text substringFromIndex:visibleRange.location];
 
-    UIGraphicsBeginImageContext(self.activeSketchView.frame.size);
-    [self.activeSketchView.image drawInRect:self.activeSketchView.bounds];
+    // Update the current page with visible text
+    textView.text = visibleText;
 
-    CGContextRef context = UIGraphicsGetCurrentContext();
-    CGContextSetStrokeColorWithColor(context, [UIColor blackColor].CGColor);
-    CGContextSetLineWidth(context, 2.0);
+    // Create a new page and set the remaining text
+    [self addNewPage];
+    self.activeTextView.text = remainingText;
 
-    if (gesture.state == UIGestureRecognizerStateBegan) {
-        CGContextMoveToPoint(context, touchPoint.x, touchPoint.y);
-    } else if (gesture.state == UIGestureRecognizerStateChanged) {
-        CGContextAddLineToPoint(context, touchPoint.x, touchPoint.y);
-        CGContextStrokePath(context);
-        CGContextMoveToPoint(context, touchPoint.x, touchPoint.y);
-    }
+    // Move the cursor to the new page
+    [self.activeTextView becomeFirstResponder];
+}
 
-    self.activeSketchView.image = UIGraphicsGetImageFromCurrentImageContext();
-    UIGraphicsEndImageContext();
+- (NSRange)getVisibleTextRangeForTextView:(UITextView *)textView {
+    UITextPosition *startPosition = textView.beginningOfDocument;
+    UITextPosition *endPosition = [textView characterRangeAtPoint:CGPointMake(0, textView.bounds.size.height)].end;
+    if (!startPosition || !endPosition) return NSMakeRange(NSNotFound, 0);
+
+    NSInteger startOffset = [textView offsetFromPosition:startPosition toPosition:endPosition];
+    return NSMakeRange(startOffset, textView.text.length - startOffset);
 }
 
 #pragma mark - Save Functionality
 
 - (void)saveAndReturn {
-    // Save text and sketches for each page
-    NSMutableArray *pagesData = [NSMutableArray array];
-    for (UIView *page in self.pages) {
-        UITextView *textView = page.subviews[0];
-        UIImageView *sketchView = page.subviews[1];
-
-        NSMutableDictionary *pageData = [NSMutableDictionary dictionary];
-        pageData[@"text"] = textView.text ?: @"";
-
-        if (sketchView.image) {
-            NSString *imagePath = [self saveImage:sketchView.image];
-            if (imagePath) pageData[@"sketch"] = imagePath;
-        }
-
-        [pagesData addObject:pageData];
+    if (self.pages.count == 0) {
+        [self dismissViewControllerAnimated:YES completion:nil];
+        return;
     }
 
-    NSLog(@"Saved Pages: %@", pagesData);
+    // Generate note file name
+    NSString *noteFileName = self.noteFileName ?: [NSString stringWithFormat:@"note_%@", @([[NSDate date] timeIntervalSince1970])];
+    NSString *notesDir = [self notesDirectory];
+
+    // Prepare to save data
+    NSMutableArray *pageDataArray = [NSMutableArray array];
+
+    for (UIView *page in self.pages) {
+        UITextView *textView = page.subviews[0]; // Get the text view
+        NSString *textContent = textView.text ?: @"";
+
+        NSDictionary *pageData = @{
+            @"text": textContent,
+            @"sketch": @[] // Placeholder for sketch data
+        };
+        [pageDataArray addObject:pageData];
+    }
+
+    NSDictionary *noteData = @{@"pages": pageDataArray};
+    NSData *jsonData = [NSJSONSerialization dataWithJSONObject:noteData options:NSJSONWritingPrettyPrinted error:nil];
+
+    // Save the JSON data
+    NSString *jsonPath = [notesDir stringByAppendingPathComponent:[NSString stringWithFormat:@"%@.json", noteFileName]];
+    [jsonData writeToFile:jsonPath atomically:YES];
+
+    // Return to the previous screen
     [self dismissViewControllerAnimated:YES completion:nil];
 }
 
-- (NSString *)saveImage:(UIImage *)image {
-    NSData *imageData = UIImagePNGRepresentation(image);
-    NSString *filePath = [NSTemporaryDirectory() stringByAppendingPathComponent:[NSString stringWithFormat:@"sketch_%@.png", @([[NSDate date] timeIntervalSince1970])]];
-    if ([imageData writeToFile:filePath atomically:YES]) {
-        return filePath;
+#pragma mark - Utility
+
+- (NSString *)notesDirectory {
+    NSArray *paths = NSSearchPathForDirectoriesInDomains(NSDocumentDirectory, NSUserDomainMask, YES);
+    NSString *documentsDirectory = [paths firstObject];
+    NSString *notesDir = [documentsDirectory stringByAppendingPathComponent:@"saved_notes"];
+
+    if (![[NSFileManager defaultManager] fileExistsAtPath:notesDir]) {
+        [[NSFileManager defaultManager] createDirectoryAtPath:notesDir withIntermediateDirectories:YES attributes:nil error:nil];
     }
-    return nil;
+    return notesDir;
 }
 
 @end
+
