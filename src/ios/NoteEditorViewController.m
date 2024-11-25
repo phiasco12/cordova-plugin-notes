@@ -108,6 +108,10 @@
     [self scrollToPage:page];
 }
 
+- (void)scrollToPage:(UIView *)page {
+    CGFloat offset = page.frame.origin.y - 10.0; // Small padding before the page
+    [self.scrollView setContentOffset:CGPointMake(0, offset) animated:YES];
+}
 
 #pragma mark - Text Overflow Handling
 
@@ -201,3 +205,4 @@
 }
 
 @end
+
