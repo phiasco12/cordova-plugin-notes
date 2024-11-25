@@ -504,13 +504,13 @@
 
 @interface SketchView : UIView
 
-@property (nonatomic, strong) NSMutableArray<UIBezierPath *> *paths; // Drawing paths
-@property (nonatomic, strong) UIBezierPath *currentPath;             // Current path
-@property (nonatomic, strong) UIColor *lineColor;                   // Line color
-@property (nonatomic, assign) CGFloat lineWidth;                    // Line width
+@property (nonatomic, strong) NSMutableArray<UIBezierPath *> *paths;
+@property (nonatomic, strong) UIBezierPath *currentPath;
+@property (nonatomic, strong) UIColor *lineColor;
+@property (nonatomic, assign) CGFloat lineWidth;
 
 - (void)clearDrawing;
-- (NSArray<NSDictionary *> *)getDrawingPaths; // Convert paths to savable format
+- (NSArray<NSDictionary *> *)getDrawingPaths;
 
 @end
 
@@ -559,7 +559,7 @@
 - (NSArray<NSDictionary *> *)getDrawingPaths {
     NSMutableArray *result = [NSMutableArray array];
     for (UIBezierPath *path in self.paths) {
-        [result addObject:@{@"path": path}]; // Simplified for example
+        [result addObject:@{@"path": path}]; // Simplified representation
     }
     return result;
 }
@@ -568,16 +568,15 @@
 
 @interface NoteEditorViewController () <UITextViewDelegate>
 
-// UI Elements
 @property (nonatomic, strong) UIScrollView *scrollView;
 @property (nonatomic, strong) UIView *pagesContainer;
 @property (nonatomic, strong) UIView *bottomToolbar;
 
 @property (nonatomic) CGSize pageSize;
-@property (nonatomic, strong) NSMutableArray<UIView *> *pages; // Pages in the editor
-@property (nonatomic, weak) UIView *activePage;               // Current active page
-@property (nonatomic, weak) UITextView *activeTextView;       // Current active text input
-@property (nonatomic, assign) BOOL isDrawingMode;             // To track drawing mode
+@property (nonatomic, strong) NSMutableArray<UIView *> *pages;
+@property (nonatomic, weak) UIView *activePage;
+@property (nonatomic, weak) UITextView *activeTextView;
+@property (nonatomic, assign) BOOL isDrawingMode;
 
 @end
 
@@ -586,19 +585,13 @@
 - (void)viewDidLoad {
     [super viewDidLoad];
     self.view.backgroundColor = [UIColor whiteColor];
-    self.isDrawingMode = NO; // Default to typing mode
+    self.isDrawingMode = NO;
 
-    // Initialize properties
     self.pages = [NSMutableArray array];
     self.pageSize = CGSizeZero;
 
-    // Setup scroll view
     [self setupScrollView];
-
-    // Setup bottom toolbar
     [self setupBottomToolbar];
-
-    // Add the first page automatically
     [self addNewPage];
 }
 
@@ -618,79 +611,67 @@
     self.bottomToolbar.autoresizingMask = UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleTopMargin;
     self.bottomToolbar.backgroundColor = [UIColor darkGrayColor];
 
-    // Save button
     UIButton *saveButton = [UIButton buttonWithType:UIButtonTypeSystem];
     [saveButton setTitle:@"Save" forState:UIControlStateNormal];
     [saveButton setFrame:CGRectMake(10, 10, 100, 40)];
     [saveButton addTarget:self action:@selector(saveAndReturn) forControlEvents:UIControlEventTouchUpInside];
     [self.bottomToolbar addSubview:saveButton];
 
-    // Toggle drawing mode button
     UIButton *toggleButton = [UIButton buttonWithType:UIButtonTypeSystem];
     [toggleButton setTitle:@"Toggle Drawing" forState:UIControlStateNormal];
     [toggleButton setFrame:CGRectMake(120, 10, 150, 40)];
     [toggleButton addTarget:self action:@selector(toggleDrawingMode) forControlEvents:UIControlEventTouchUpInside];
     [self.bottomToolbar addSubview:toggleButton];
 
-    // Add toolbar to the view
     [self.view addSubview:self.bottomToolbar];
 }
 
 #pragma mark - Page Management
 
 - (void)addNewPage {
-    CGFloat pageWidth = self.view.bounds.size.width - 40; // 20px padding on each side
-    CGFloat pageHeight = self.view.bounds.size.height - 120; // Leave space for toolbar
-    CGFloat verticalSpacing = 20.0; // Space between pages
+    CGFloat pageWidth = self.view.bounds.size.width - 40;
+    CGFloat pageHeight = self.view.bounds.size.height - 120;
+    CGFloat verticalSpacing = 20.0;
 
-    // Calculate the Y offset for the new page
     CGFloat pageYPosition = 0;
-
     if (self.pages.count > 0) {
-        // Get the position of the last page and add spacing
         UIView *lastPage = [self.pages lastObject];
         pageYPosition = CGRectGetMaxY(lastPage.frame) + verticalSpacing;
     }
 
-    // Create a new page container
     UIView *page = [[UIView alloc] initWithFrame:CGRectMake(20, pageYPosition, pageWidth, pageHeight)];
     page.backgroundColor = [UIColor whiteColor];
     page.layer.borderColor = [UIColor lightGrayColor].CGColor;
     page.layer.borderWidth = 1.0;
     page.layer.cornerRadius = 10.0;
 
-    // Add a UITextView for typing
     UITextView *textView = [[UITextView alloc] initWithFrame:CGRectInset(page.bounds, 10, 10)];
     textView.backgroundColor = [UIColor clearColor];
     textView.font = [UIFont systemFontOfSize:16.0];
     textView.textColor = [UIColor blackColor];
-    textView.delegate = self; // Enable overflow handling
+    textView.delegate = self;
     textView.autoresizingMask = UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleHeight;
 
-    // Add a SketchView for drawing
     SketchView *drawingView = [[SketchView alloc] initWithFrame:page.bounds];
-    drawingView.hidden = YES; // Initially hidden
+    drawingView.hidden = YES;
     [page addSubview:textView];
     [page addSubview:drawingView];
 
-    // Add the page to the container
     [self.pagesContainer addSubview:page];
     [self.pages addObject:page];
 
     self.activePage = page;
     self.activeTextView = textView;
 
-    // Update the height of the pagesContainer to fit the new page
     CGFloat newHeight = CGRectGetMaxY(page.frame) + verticalSpacing;
     self.pagesContainer.frame = CGRectMake(0, 0, self.scrollView.bounds.size.width, newHeight);
     self.scrollView.contentSize = CGSizeMake(self.scrollView.bounds.size.width, newHeight);
 
-    // Automatically scroll to the new page
     [self scrollToPage:page];
 }
 
 - (void)scrollToPage:(UIView *)page {
-    CGFloat offset = page.frame.origin.y - 10.0; // Small padding before the page
+    CGFloat offset = page.frame.origin.y - 10.0;
     [self.scrollView setContentOffset:CGPointMake(0, offset) animated:YES];
 }
 
@@ -717,7 +698,6 @@
     }
 
     NSString *notesDir = [self notesDirectory];
-
     NSMutableArray *pageDataArray = [NSMutableArray array];
 
     for (UIView *page in self.pages) {
@@ -726,22 +706,30 @@
 
         NSDictionary *pageData = @{
             @"text": textView.text ?: @"",
-            @"sketch": [drawingView getDrawingPaths]
+            @"sketch": [drawingView getDrawingPaths] ?: @[]
         };
         [pageDataArray addObject:pageData];
     }
 
-    // Save JSON
-    NSData *jsonData = [NSJSONSerialization dataWithJSONObject:@{@"pages": pageDataArray} options:NSJSONWritingPrettyPrinted error:nil];
-    [jsonData writeToFile:[notesDir stringByAppendingPathComponent:@"note.json"] atomically:YES];
+    NSDictionary *noteData = @{@"pages": pageDataArray};
+    NSData *jsonData = [NSJSONSerialization dataWithJSONObject:noteData options:NSJSONWritingPrettyPrinted error:nil];
+    NSString *jsonPath = [notesDir stringByAppendingPathComponent:@"note.json"];
+    BOOL jsonSaved = [jsonData writeToFile:jsonPath atomically:YES];
+
+    if (!jsonSaved) {
+        NSLog(@"Error saving JSON file.");
+    }
 
     [self dismissViewControllerAnimated:YES completion:nil];
 }
+
+#pragma mark - Utility
 
 - (NSString *)notesDirectory {
     NSArray *paths = NSSearchPathForDirectoriesInDomains(NSDocumentDirectory, NSUserDomainMask, YES);
     NSString *documentsDirectory = [paths firstObject];
     NSString *notesDir = [documentsDirectory stringByAppendingPathComponent:@"saved_notes"];
+
     if (![[NSFileManager defaultManager] fileExistsAtPath:notesDir]) {
         [[NSFileManager defaultManager] createDirectoryAtPath:notesDir withIntermediateDirectories:YES attributes:nil error:nil];
     }
