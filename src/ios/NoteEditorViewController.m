@@ -66,9 +66,16 @@
 - (void)addNewPage {
     CGFloat pageWidth = self.view.bounds.size.width - 40; // 20px padding on each side
     CGFloat pageHeight = self.view.bounds.size.height - 120; // Leave space for toolbar
+    CGFloat verticalSpacing = 20.0; // Space between pages
+
+    // Calculate the Y offset for the new page
+    CGFloat pageYPosition = (self.pages.count * (pageHeight + verticalSpacing));
+    if (self.pages.count > 0) {
+        pageYPosition += verticalSpacing; // Ensure spacing is applied between all pages
+    }
 
     // Create a new page container
-    UIView *page = [[UIView alloc] initWithFrame:CGRectMake(20, self.pages.count * (pageHeight + 20), pageWidth, pageHeight)];
+    UIView *page = [[UIView alloc] initWithFrame:CGRectMake(20, pageYPosition, pageWidth, pageHeight)];
     page.backgroundColor = [UIColor whiteColor];
     page.layer.borderColor = [UIColor lightGrayColor].CGColor;
     page.layer.borderWidth = 1.0;
@@ -92,10 +99,15 @@
     self.activePage = page;
     self.activeTextView = textView;
 
-    // Update scroll content size
-    self.pagesContainer.frame = CGRectMake(0, 0, self.scrollView.bounds.size.width, CGRectGetMaxY(page.frame) + 20);
-    self.scrollView.contentSize = self.pagesContainer.frame.size;
+    // Update the height of the pagesContainer to fit the new page
+    CGFloat newHeight = CGRectGetMaxY(page.frame) + verticalSpacing;
+    self.pagesContainer.frame = CGRectMake(0, 0, self.scrollView.bounds.size.width, newHeight);
+    self.scrollView.contentSize = CGSizeMake(self.scrollView.bounds.size.width, newHeight);
+
+    // Automatically scroll to the new page
+    [self scrollToPage:page];
 }
+
 
 #pragma mark - Text Overflow Handling
 
