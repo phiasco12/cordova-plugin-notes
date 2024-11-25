@@ -250,6 +250,7 @@
 @property (nonatomic, assign) CGFloat lineWidth;
 
 - (void)clearDrawing;
+- (NSArray<NSDictionary *> *)getDrawingPaths; // Convert paths to savable format
 
 @end
 
@@ -293,6 +294,16 @@
 - (void)clearDrawing {
     [self.paths removeAllObjects];
     [self setNeedsDisplay];
+}
+
+- (NSArray<NSDictionary *> *)getDrawingPaths {
+    NSMutableArray *result = [NSMutableArray array];
+    for (UIBezierPath *path in self.paths) {
+        NSMutableArray *points = [NSMutableArray array];
+        CGPathApply(path.CGPath, (__bridge void *)points, CGPathApplier);
+        [result addObject:@{@"points": points}];
+    }
+    return result;
 }
 
 @end
@@ -445,7 +456,46 @@
 #pragma mark - Save Functionality
 
 - (void)saveAndReturn {
-    // Implement save functionality, as per the existing code.
+    if (self.pages.count == 0) {
+        [self dismissViewControllerAnimated:YES completion:nil];
+        return;
+    }
+
+    NSString *noteFileName = self.noteFileName ?: [NSString stringWithFormat:@"note_%@", @([[NSDate date] timeIntervalSince1970])];
+    NSString *notesDir = [self notesDirectory];
+
+    NSMutableArray *pageDataArray = [NSMutableArray array];
+
+    for (UIView *page in self.pages) {
+        UITextView *textView = page.subviews[0];
+        SketchView *sketchView = page.subviews[1];
+
+        NSDictionary *pageData = @{
+            @"text": textView.text ?: @"",
+            @"sketch": [sketchView getDrawingPaths] ?: @[]
+        };
+        [pageDataArray addObject:pageData];
+    }
+
+    NSDictionary *noteData = @{@"pages": pageDataArray};
+    NSData *jsonData = [NSJSONSerialization dataWithJSONObject:noteData options:NSJSONWritingPrettyPrinted error:nil];
+    NSString *jsonPath = [notesDir stringByAppendingPathComponent:[NSString stringWithFormat:@"%@.json", noteFileName]];
+    [jsonData writeToFile:jsonPath atomically:YES];
+
+    [self dismissViewControllerAnimated:YES completion:nil];
+}
+
+#pragma mark - Utility
+
+- (NSString *)notesDirectory {
+    NSArray *paths = NSSearchPathForDirectoriesInDomains(NSDocumentDirectory, NSUserDomainMask, YES);
+    NSString *documentsDirectory = [paths firstObject];
+    NSString *notesDir = [documentsDirectory stringByAppendingPathComponent:@"saved_notes"];
+
+    if (![[NSFileManager defaultManager] fileExistsAtPath:notesDir]) {
+        [[NSFileManager defaultManager] createDirectoryAtPath:notesDir withIntermediateDirectories:YES attributes:nil error:nil];
+    }
+    return notesDir;
 }
 
 @end
