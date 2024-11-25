@@ -71,6 +71,11 @@
     // Calculate the Y offset for the new page
     CGFloat pageYPosition = self.pages.count * (pageHeight + verticalSpacing);
 
+    // Add vertical spacing even for the first page
+    if (self.pages.count > 0) {
+        pageYPosition += verticalSpacing; // Ensure spacing is applied for the first page
+    }
+
     // Create a new page container
     UIView *page = [[UIView alloc] initWithFrame:CGRectMake(20, pageYPosition, pageWidth, pageHeight)];
     page.backgroundColor = [UIColor whiteColor];
@@ -104,7 +109,6 @@
     // Automatically scroll to the new page
     [self scrollToPage:page];
 }
-
 
 - (void)scrollToPage:(UIView *)page {
     CGFloat offset = page.frame.origin.y - 10.0; // Small padding before the page
@@ -203,4 +207,3 @@
 }
 
 @end
-
