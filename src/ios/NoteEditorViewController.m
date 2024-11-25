@@ -300,10 +300,20 @@
     NSMutableArray *result = [NSMutableArray array];
     for (UIBezierPath *path in self.paths) {
         NSMutableArray *points = [NSMutableArray array];
-        CGPathApply(path.CGPath, (__bridge void *)points, CGPathApplier);
+        CGPathApply(path.CGPath, (__bridge void *)points, CGPathCallback);
         [result addObject:@{@"points": points}];
     }
     return result;
+}
+
+void CGPathCallback(void *info, const CGPathElement *element) {
+    NSMutableArray *points = (__bridge NSMutableArray *)info;
+    CGPoint *pathPoints = element->points;
+    NSInteger count = (element->type == kCGPathElementAddCurveToPoint) ? 3 : 1;
+
+    for (NSInteger i = 0; i < count; i++) {
+        [points addObject:[NSValue valueWithCGPoint:pathPoints[i]]];
+    }
 }
 
 @end
@@ -374,68 +384,55 @@
     [toggleButton addTarget:self action:@selector(toggleDrawingMode) forControlEvents:UIControlEventTouchUpInside];
     [self.bottomToolbar addSubview:toggleButton];
 
-    // Add toolbar to the view
     [self.view addSubview:self.bottomToolbar];
 }
 
 #pragma mark - Page Management
 
 - (void)addNewPage {
-    CGFloat pageWidth = self.view.bounds.size.width - 40; // 20px padding on each side
-    CGFloat pageHeight = self.view.bounds.size.height - 120; // Leave space for toolbar
-    CGFloat verticalSpacing = 20.0; // Space between pages
+    CGFloat pageWidth = self.view.bounds.size.width - 40;
+    CGFloat pageHeight = self.view.bounds.size.height - 120;
+    CGFloat verticalSpacing = 20.0;
 
-    // Calculate the Y offset for the new page
     CGFloat pageYPosition = 0;
-
     if (self.pages.count > 0) {
-        // Get the position of the last page and add spacing
         UIView *lastPage = [self.pages lastObject];
         pageYPosition = CGRectGetMaxY(lastPage.frame) + verticalSpacing;
     }
 
-    // Create a new page container
     UIView *page = [[UIView alloc] initWithFrame:CGRectMake(20, pageYPosition, pageWidth, pageHeight)];
     page.backgroundColor = [UIColor whiteColor];
     page.layer.borderColor = [UIColor lightGrayColor].CGColor;
     page.layer.borderWidth = 1.0;
     page.layer.cornerRadius = 10.0;
 
-    // Add a UITextView for typing
     UITextView *textView = [[UITextView alloc] initWithFrame:CGRectInset(page.bounds, 10, 10)];
     textView.backgroundColor = [UIColor clearColor];
     textView.font = [UIFont systemFontOfSize:16.0];
     textView.textColor = [UIColor blackColor];
-    textView.delegate = self; // Enable overflow handling
+    textView.delegate = self;
     textView.autoresizingMask = UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleHeight;
 
-    // Add a SketchView for drawing
     SketchView *sketchView = [[SketchView alloc] initWithFrame:page.bounds];
-    sketchView.hidden = YES; // Initially hidden
+    sketchView.hidden = YES;
     [page addSubview:sketchView];
-
-    // Add the UITextView and SketchView to the page
     [page addSubview:textView];
-    [page addSubview:sketchView];
 
-    // Add the page to the container
     [self.pagesContainer addSubview:page];
     [self.pages addObject:page];
 
     self.activePage = page;
     self.activeTextView = textView;
 
-    // Update the height of the pagesContainer to fit the new page
     CGFloat newHeight = CGRectGetMaxY(page.frame) + verticalSpacing;
     self.pagesContainer.frame = CGRectMake(0, 0, self.scrollView.bounds.size.width, newHeight);
     self.scrollView.contentSize = CGSizeMake(self.scrollView.bounds.size.width, newHeight);
 
-    // Automatically scroll to the new page
     [self scrollToPage:page];
 }
 
 - (void)scrollToPage:(UIView *)page {
-    CGFloat offset = page.frame.origin.y - 10.0; // Small padding before the page
+    CGFloat offset = page.frame.origin.y - 10.0;
     [self.scrollView setContentOffset:CGPointMake(0, offset) animated:YES];
 }
 
@@ -485,8 +482,6 @@
     [self dismissViewControllerAnimated:YES completion:nil];
 }
 
-#pragma mark - Utility
-
 - (NSString *)notesDirectory {
     NSArray *paths = NSSearchPathForDirectoriesInDomains(NSDocumentDirectory, NSUserDomainMask, YES);
     NSString *documentsDirectory = [paths firstObject];
@@ -499,4 +494,3 @@
 }
 
 @end
-
