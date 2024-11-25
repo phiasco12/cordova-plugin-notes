@@ -188,7 +188,28 @@
 
     // Save the JSON data
     NSString *jsonPath = [notesDir stringByAppendingPathComponent:[NSString stringWithFormat:@"%@.json", noteFileName]];
-    [jsonData writeToFile:jsonPath atomically:YES];
+    BOOL jsonSaved = [jsonData writeToFile:jsonPath atomically:YES];
+
+    if (!jsonSaved) {
+        NSLog(@"Error saving JSON file.");
+        return;
+    }
+
+    // Save a preview image of the first page
+    NSString *bitmapPath = [notesDir stringByAppendingPathComponent:[NSString stringWithFormat:@"%@.png", noteFileName]];
+    UIView *firstPage = self.pages.firstObject;
+
+    UIGraphicsBeginImageContextWithOptions(firstPage.bounds.size, NO, [UIScreen mainScreen].scale);
+    [firstPage.layer renderInContext:UIGraphicsGetCurrentContext()];
+    UIImage *bitmap = UIGraphicsGetImageFromCurrentImageContext();
+    UIGraphicsEndImageContext();
+
+    BOOL imageSaved = [UIImagePNGRepresentation(bitmap) writeToFile:bitmapPath atomically:YES];
+
+    if (!imageSaved) {
+        NSLog(@"Error saving preview image.");
+        return;
+    }
 
     // Return to the previous screen
     [self dismissViewControllerAnimated:YES completion:nil];
