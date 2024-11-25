@@ -502,6 +502,70 @@
 
 #import "NoteEditorViewController.h"
 
+@interface SketchView : UIView
+
+@property (nonatomic, strong) NSMutableArray<UIBezierPath *> *paths; // Drawing paths
+@property (nonatomic, strong) UIBezierPath *currentPath;             // Current path
+@property (nonatomic, strong) UIColor *lineColor;                   // Line color
+@property (nonatomic, assign) CGFloat lineWidth;                    // Line width
+
+- (void)clearDrawing;
+- (NSArray<NSDictionary *> *)getDrawingPaths; // Convert paths to savable format
+
+@end
+
+@implementation SketchView
+
+- (instancetype)initWithFrame:(CGRect)frame {
+    self = [super initWithFrame:frame];
+    if (self) {
+        self.paths = [NSMutableArray array];
+        self.lineColor = [UIColor blackColor];
+        self.lineWidth = 2.0;
+        self.backgroundColor = [UIColor clearColor];
+    }
+    return self;
+}
+
+- (void)touchesBegan:(NSSet<UITouch *> *)touches withEvent:(UIEvent *)event {
+    UITouch *touch = [touches anyObject];
+    CGPoint point = [touch locationInView:self];
+    self.currentPath = [UIBezierPath bezierPath];
+    self.currentPath.lineWidth = self.lineWidth;
+    [self.currentPath moveToPoint:point];
+    [self.paths addObject:self.currentPath];
+    [self setNeedsDisplay];
+}
+
+- (void)touchesMoved:(NSSet<UITouch *> *)touches withEvent:(UIEvent *)event {
+    UITouch *touch = [touches anyObject];
+    CGPoint point = [touch locationInView:self];
+    [self.currentPath addLineToPoint:point];
+    [self setNeedsDisplay];
+}
+
+- (void)drawRect:(CGRect)rect {
+    for (UIBezierPath *path in self.paths) {
+        [self.lineColor setStroke];
+        [path stroke];
+    }
+}
+
+- (void)clearDrawing {
+    [self.paths removeAllObjects];
+    [self setNeedsDisplay];
+}
+
+- (NSArray<NSDictionary *> *)getDrawingPaths {
+    NSMutableArray *result = [NSMutableArray array];
+    for (UIBezierPath *path in self.paths) {
+        [result addObject:@{@"path": path}]; // Simplified for example
+    }
+    return result;
+}
+
+@end
+
 @interface NoteEditorViewController () <UITextViewDelegate>
 
 // UI Elements
@@ -511,9 +575,9 @@
 
 @property (nonatomic) CGSize pageSize;
 @property (nonatomic, strong) NSMutableArray<UIView *> *pages; // Pages in the editor
-@property (nonatomic, weak) UIView *activePage; // Current active page
-@property (nonatomic, weak) UITextView *activeTextView; // Current active text input
-@property (nonatomic, assign) BOOL isDrawingMode; // To track the drawing mode
+@property (nonatomic, weak) UIView *activePage;               // Current active page
+@property (nonatomic, weak) UITextView *activeTextView;       // Current active text input
+@property (nonatomic, assign) BOOL isDrawingMode;             // To track drawing mode
 
 @end
 
@@ -603,12 +667,9 @@
     textView.delegate = self; // Enable overflow handling
     textView.autoresizingMask = UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleHeight;
 
-    // Add a UIView for drawing (hidden initially)
-    UIView *drawingView = [[UIView alloc] initWithFrame:page.bounds];
-    drawingView.backgroundColor = [UIColor clearColor];
-    drawingView.hidden = YES; // Only visible in drawing mode
-
-    // Add the UITextView and drawingView to the page
+    // Add a SketchView for drawing
+    SketchView *drawingView = [[SketchView alloc] initWithFrame:page.bounds];
+    drawingView.hidden = YES; // Initially hidden
     [page addSubview:textView];
     [page addSubview:drawingView];
 
@@ -640,7 +701,7 @@
 
     for (UIView *page in self.pages) {
         UITextView *textView = page.subviews[0];
-        UIView *drawingView = page.subviews[1];
+        SketchView *drawingView = page.subviews[1];
 
         textView.hidden = self.isDrawingMode;
         drawingView.hidden = !self.isDrawingMode;
@@ -655,47 +716,32 @@
         return;
     }
 
-    // Generate note file name
-    NSString *noteFileName = self.noteFileName ?: [NSString stringWithFormat:@"note_%@", @([[NSDate date] timeIntervalSince1970])];
     NSString *notesDir = [self notesDirectory];
 
-    // Prepare to save data
     NSMutableArray *pageDataArray = [NSMutableArray array];
 
     for (UIView *page in self.pages) {
-        UITextView *textView = page.subviews[0]; // Get the text view
-        NSString *textContent = textView.text ?: @"";
+        UITextView *textView = page.subviews[0];
+        SketchView *drawingView = page.subviews[1];
 
         NSDictionary *pageData = @{
-            @"text": textContent,
-            @"sketch": @[] // Placeholder for sketch data
+            @"text": textView.text ?: @"",
+            @"sketch": [drawingView getDrawingPaths]
         };
         [pageDataArray addObject:pageData];
     }
 
-    NSDictionary *noteData = @{@"pages": pageDataArray};
-    NSData *jsonData = [NSJSONSerialization dataWithJSONObject:noteData options:NSJSONWritingPrettyPrinted error:nil];
+    // Save JSON
+    NSData *jsonData = [NSJSONSerialization dataWithJSONObject:@{@"pages": pageDataArray} options:NSJSONWritingPrettyPrinted error:nil];
+    [jsonData writeToFile:[notesDir stringByAppendingPathComponent:@"note.json"] atomically:YES];
 
-    // Save the JSON data
-    NSString *jsonPath = [notesDir stringByAppendingPathComponent:[NSString stringWithFormat:@"%@.json", noteFileName]];
-    BOOL jsonSaved = [jsonData writeToFile:jsonPath atomically:YES];
-
-    if (!jsonSaved) {
-        NSLog(@"Error saving JSON file.");
-        return;
-    }
-
-    // Return to the previous screen
     [self dismissViewControllerAnimated:YES completion:nil];
 }
-
-#pragma mark - Utility
 
 - (NSString *)notesDirectory {
     NSArray *paths = NSSearchPathForDirectoriesInDomains(NSDocumentDirectory, NSUserDomainMask, YES);
     NSString *documentsDirectory = [paths firstObject];
     NSString *notesDir = [documentsDirectory stringByAppendingPathComponent:@"saved_notes"];
-
     if (![[NSFileManager defaultManager] fileExistsAtPath:notesDir]) {
         [[NSFileManager defaultManager] createDirectoryAtPath:notesDir withIntermediateDirectories:YES attributes:nil error:nil];
     }
