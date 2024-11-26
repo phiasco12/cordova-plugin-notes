@@ -55,11 +55,16 @@
             </feature>
         </config-file>
    <!-- Include the Objective-C source files -->
-    <source-file src="src/ios/NotesPlugin.h" />
+    <!--<source-file src="src/ios/NotesPlugin.h" />
     <source-file src="src/ios/NotesPlugin.m" />
     <source-file src="src/ios/NotesListViewController.h" />
     <source-file src="src/ios/NotesListViewController.m" />
     <source-file src="src/ios/NoteEditorViewController.h" />
-    <source-file src="src/ios/NoteEditorViewController.m" />
+    <source-file src="src/ios/NoteEditorViewController.m" />-->
+
+
+        <source-file src="src/ios/NotesPlugin.swift" />
+       <source-file src="src/ios/NotesListViewController.swift" />
+    <source-file src="src/ios/NoteEditorViewController.swift" /> 
     </platform>
 </plugin>
