@@ -3,30 +3,31 @@ import UIKit
 class NoteEditorViewController: UIViewController, UITextViewDelegate {
 
     // UI Elements
-    var scrollView: UIScrollView!
-    var pagesContainer: UIView!
-    var bottomToolbar: UIView!
+    private var scrollView: UIScrollView!
+    private var pagesContainer: UIView!
+    private var bottomToolbar: UIView!
 
-    var pageSize: CGSize = .zero
-    var pages: [UIView] = []
-    weak var activePage: UIView?
-    weak var activeTextView: UITextView?
-    var activeDrawingLayer: CAShapeLayer?
-    var isDrawingMode: Bool = false
+    private var pageSize: CGSize = .zero
+    private var pages: [UIView] = []
+    private weak var activePage: UIView?
+    private weak var activeTextView: UITextView?
+
+    var noteFileName: String?
 
     override func viewDidLoad() {
         super.viewDidLoad()
         view.backgroundColor = .white
 
-        // Setup scroll view and toolbar
+        // Setup UI
         setupScrollView()
         setupBottomToolbar()
 
-        // Add the first page
+        // Add the first page automatically
         addNewPage()
     }
 
     // MARK: - UI Setup
+
     private func setupScrollView() {
         scrollView = UIScrollView(frame: view.bounds)
         scrollView.autoresizingMask = [.flexibleWidth, .flexibleHeight]
@@ -37,11 +38,9 @@ class NoteEditorViewController: UIViewController, UITextViewDelegate {
     }
 
     private func setupBottomToolbar() {
-        let toolbarHeight: CGFloat = 60
-        bottomToolbar = UIView(frame: CGRect(x: 0, y: view.bounds.height - toolbarHeight, width: view.bounds.width, height: toolbarHeight))
+        bottomToolbar = UIView(frame: CGRect(x: 0, y: view.bounds.height - 60, width: view.bounds.width, height: 60))
         bottomToolbar.autoresizingMask = [.flexibleWidth, .flexibleTopMargin]
         bottomToolbar.backgroundColor = .darkGray
-        view.addSubview(bottomToolbar)
 
         // Save button
         let saveButton = UIButton(type: .system)
@@ -50,22 +49,18 @@ class NoteEditorViewController: UIViewController, UITextViewDelegate {
         saveButton.addTarget(self, action: #selector(saveAndReturn), for: .touchUpInside)
         bottomToolbar.addSubview(saveButton)
 
-        // Toggle mode button
-        let toggleModeButton = UIButton(type: .system)
-        toggleModeButton.setTitle("Toggle Mode", for: .normal)
-        toggleModeButton.frame = CGRect(x: view.bounds.width - 110, y: 10, width: 100, height: 40)
-        toggleModeButton.addTarget(self, action: #selector(toggleTypingDrawingMode), for: .touchUpInside)
-        bottomToolbar.addSubview(toggleModeButton)
+        view.addSubview(bottomToolbar)
     }
 
     // MARK: - Page Management
+
     private func addNewPage() {
         let pageWidth = view.bounds.width - 40 // 20px padding on each side
         let pageHeight = view.bounds.height - 120 // Leave space for toolbar
         let verticalSpacing: CGFloat = 20.0
 
         // Calculate Y offset for the new page
-        let pageYPosition: CGFloat = pages.last.map { $0.frame.maxY + verticalSpacing } ?? 0
+        let pageYPosition = pages.last.map { $0.frame.maxY + verticalSpacing } ?? 0
 
         // Create a new page container
         let page = UIView(frame: CGRect(x: 20, y: pageYPosition, width: pageWidth, height: pageHeight))
@@ -77,37 +72,21 @@ class NoteEditorViewController: UIViewController, UITextViewDelegate {
         // Add a UITextView for typing
         let textView = UITextView(frame: page.bounds.insetBy(dx: 10, dy: 10))
         textView.backgroundColor = .clear
-        textView.font = UIFont.systemFont(ofSize: 16.0)
+        textView.font = .systemFont(ofSize: 16)
         textView.textColor = .black
         textView.delegate = self
         textView.autoresizingMask = [.flexibleWidth, .flexibleHeight]
+
         page.addSubview(textView)
-
-        // Add the drawing layer
-        let drawingLayer = CAShapeLayer()
-        drawingLayer.frame = page.bounds
-        drawingLayer.backgroundColor = UIColor.clear.cgColor
-        drawingLayer.lineWidth = 2.0
-        drawingLayer.strokeColor = UIColor.black.cgColor
-        drawingLayer.fillColor = UIColor.clear.cgColor
-        page.layer.addSublayer(drawingLayer)
-
-        // Add pan gesture for drawing
-        let panGesture = UIPanGestureRecognizer(target: self, action: #selector(handleDrawingPan(_:)))
-        page.addGestureRecognizer(panGesture)
-
-        // Add the page to the container
         pagesContainer.addSubview(page)
         pages.append(page)
 
-        // Update active elements
         activePage = page
         activeTextView = textView
-        activeDrawingLayer = drawingLayer
 
-        // Update the height of the pagesContainer to fit the new page
+        // Update container height to fit new page
         let newHeight = page.frame.maxY + verticalSpacing
-        pagesContainer.frame = CGRect(x: 0, y: 0, width: scrollView.bounds.width, height: newHeight)
+        pagesContainer.frame.size.height = newHeight
         scrollView.contentSize = CGSize(width: scrollView.bounds.width, height: newHeight)
 
         // Automatically scroll to the new page
@@ -115,40 +94,94 @@ class NoteEditorViewController: UIViewController, UITextViewDelegate {
     }
 
     private func scrollToPage(_ page: UIView) {
-        let offset = CGPoint(x: 0, y: page.frame.origin.y - 10.0) // Small padding before the page
-        scrollView.setContentOffset(offset, animated: true)
+        let offset = page.frame.origin.y - 10.0
+        scrollView.setContentOffset(CGPoint(x: 0, y: offset), animated: true)
     }
 
-    // MARK: - Drawing and Typing Mode
-    @objc private func toggleTypingDrawingMode() {
-        isDrawingMode.toggle()
+    // MARK: - Text Overflow Handling
 
-        // Toggle interaction for UITextView and drawing layer
-        activeTextView?.isUserInteractionEnabled = !isDrawingMode
-        activeDrawingLayer?.isHidden = !isDrawingMode
-    }
-
-    @objc private func handleDrawingPan(_ gesture: UIPanGestureRecognizer) {
-        guard isDrawingMode, let drawingLayer = activeDrawingLayer else { return }
-
-        let currentPoint = gesture.location(in: activePage)
-
-        if gesture.state == .began {
-            let path = UIBezierPath()
-            path.lineWidth = 2.0
-            path.move(to: currentPoint)
-            drawingLayer.path = path.cgPath
-        } else if gesture.state == .changed {
-            guard let currentPath = drawingLayer.path else { return }
-            let path = UIBezierPath(cgPath: currentPath)
-            path.addLine(to: currentPoint)
-            drawingLayer.path = path.cgPath
+    func textViewDidChange(_ textView: UITextView) {
+        let textSize = textView.sizeThatFits(CGSize(width: textView.bounds.width, height: .greatestFiniteMagnitude))
+        if textSize.height > textView.bounds.height {
+            handleTextOverflow(from: textView)
         }
     }
 
+    private func handleTextOverflow(from textView: UITextView) {
+        guard let visibleRange = getVisibleTextRange(for: textView) else { return }
+
+        let text = textView.text ?? ""
+        let visibleText = String(text.prefix(visibleRange.location))
+        let remainingText = String(text.suffix(text.count - visibleRange.location))
+
+        textView.text = visibleText
+
+        addNewPage()
+        activeTextView?.text = remainingText
+        activeTextView?.becomeFirstResponder()
+    }
+
+    private func getVisibleTextRange(for textView: UITextView) -> NSRange? {
+        guard let start = textView.position(from: textView.beginningOfDocument, offset: 0),
+              let end = textView.characterRange(at: CGPoint(x: 0, y: textView.bounds.height))?.end else {
+            return nil
+        }
+        let startOffset = textView.offset(from: textView.beginningOfDocument, to: end)
+        return NSRange(location: startOffset, length: textView.text.count - startOffset)
+    }
+
     // MARK: - Save Functionality
+
     @objc private func saveAndReturn() {
-        // Implement your save functionality here
-        print("Save functionality not implemented.")
+        guard !pages.isEmpty else {
+            dismiss(animated: true, completion: nil)
+            return
+        }
+
+        let noteFileName = self.noteFileName ?? "note_\(Int(Date().timeIntervalSince1970))"
+        let notesDir = notesDirectory()
+
+        var pageDataArray: [[String: Any]] = []
+
+        for page in pages {
+            guard let textView = page.subviews.first as? UITextView else { continue }
+            let textContent = textView.text ?? ""
+
+            let pageData: [String: Any] = [
+                "text": textContent,
+                "sketch": [] // Placeholder for sketch data
+            ]
+            pageDataArray.append(pageData)
+        }
+
+        let noteData: [String: Any] = ["pages": pageDataArray]
+        if let jsonData = try? JSONSerialization.data(withJSONObject: noteData, options: .prettyPrinted) {
+            let jsonPath = notesDir.appendingPathComponent("\(noteFileName).json")
+            try? jsonData.write(to: URL(fileURLWithPath: jsonPath))
+        }
+
+        // Save preview image of the first page
+        if let firstPage = pages.first {
+            let bitmapPath = notesDir.appendingPathComponent("\(noteFileName).png")
+            UIGraphicsBeginImageContextWithOptions(firstPage.bounds.size, false, UIScreen.main.scale)
+            firstPage.layer.render(in: UIGraphicsGetCurrentContext()!)
+            let bitmap = UIGraphicsGetImageFromCurrentImageContext()
+            UIGraphicsEndImageContext()
+            try? bitmap?.pngData()?.write(to: URL(fileURLWithPath: bitmapPath))
+        }
+
+        dismiss(animated: true, completion: nil)
+    }
+
+    // MARK: - Utility
+
+    private func notesDirectory() -> String {
+        let paths = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)
+        let notesDir = paths[0].appendingPathComponent("saved_notes")
+
+        if !FileManager.default.fileExists(atPath: notesDir.path) {
+            try? FileManager.default.createDirectory(at: notesDir, withIntermediateDirectories: true, attributes: nil)
+        }
+        return notesDir.path
     }
 }
