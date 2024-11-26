@@ -65,6 +65,6 @@
 
         <source-file src="src/ios/NotesPlugin.swift" />
       <source-file src="src/ios/NotesListViewController.swift" />
-    <!--<source-file src="src/ios/NoteEditorViewController.swift" />-->
+    <source-file src="src/ios/NoteEditorViewController.swift" />
     </platform>
 </plugin>
