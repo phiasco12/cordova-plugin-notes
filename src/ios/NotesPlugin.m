@@ -1,18 +1,24 @@
-#import "NotesPlugin.h"
-#import "NotesListViewController.h" // Assumes a view controller for the notes list exists
+import UIKit
 
-@implementation NotesPlugin
+@objc(NotesPlugin)
+class NotesPlugin: CDVPlugin {
 
-- (void)openNotesList:(CDVInvokedUrlCommand *)command {
-    // Create an instance of the NotesListViewController
-    NotesListViewController *notesListVC = [[NotesListViewController alloc] init];
-    
-    // Present the NotesListViewController
-    [self.viewController presentViewController:notesListVC animated:YES completion:nil];
-    
-    // Send success callback to JavaScript
-    CDVPluginResult *pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK];
-    [self.commandDelegate sendPluginResult:pluginResult callbackId:command.callbackId];
+    @objc(openNotesList:)
+    func openNotesList(command: CDVInvokedUrlCommand) {
+        // Try to instantiate the NotesListViewController from the main storyboard
+        guard let storyboard = UIStoryboard(name: "Main", bundle: nil) as UIStoryboard?,
+              let notesListVC = storyboard.instantiateViewController(withIdentifier: "NotesListViewController") as? UIViewController else {
+            // Return an error if the view controller cannot be instantiated
+            let pluginResult = CDVPluginResult(status: CDVCommandStatus_ERROR, messageAs: "Failed to open notes list")
+            self.commandDelegate.send(pluginResult, callbackId: command.callbackId)
+            return
+        }
+
+        // Present the NotesListViewController
+        self.viewController?.present(notesListVC, animated: true, completion: nil)
+
+        // Send success callback to JavaScript
+        let pluginResult = CDVPluginResult(status: CDVCommandStatus_OK)
+        self.commandDelegate.send(pluginResult, callbackId: command.callbackId)
+    }
 }
-
-@end
